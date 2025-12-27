@@ -1,4 +1,5 @@
 import { formatRating } from '../utils/format.js';
+import { resolvePosterUrl } from '../utils/media.js';
 
 export default function HeroCard({ item }) {
   if (!item) {
@@ -12,8 +13,9 @@ export default function HeroCard({ item }) {
     );
   }
 
-  const posterStyle = item.PosterPath
-    ? { backgroundImage: `url(${item.PosterPath})` }
+  const posterUrl = resolvePosterUrl(item.PosterPath);
+  const posterStyle = posterUrl
+    ? { backgroundImage: `url(${posterUrl})` }
     : { backgroundImage: 'linear-gradient(135deg, #1d1f2a, #2a2f3b)' };
 
   return (
@@ -22,7 +24,7 @@ export default function HeroCard({ item }) {
         <div className="hero-label">Featured</div>
         <h2>{item.Title}</h2>
         <p>
-          {item.TitleType} ? {item.ReleaseYear}
+          {item.TitleType} - {item.ReleaseYear}
         </p>
         <div className="hero-rating">{formatRating(item.Rating)}</div>
       </div>

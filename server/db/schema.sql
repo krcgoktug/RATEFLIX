@@ -19,8 +19,13 @@ CREATE TABLE dbo.Titles (
   TitleType NVARCHAR(20) NOT NULL CHECK (TitleType IN ('Movie','Series')),
   ReleaseYear INT NOT NULL,
   PosterPath NVARCHAR(400) NULL,
+  TmdbId INT NULL,
+  TmdbType NVARCHAR(10) NULL CHECK (TmdbType IN ('movie','tv')),
   CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
+
+CREATE UNIQUE INDEX IX_Titles_Tmdb ON dbo.Titles (TmdbId, TmdbType)
+WHERE TmdbId IS NOT NULL AND TmdbType IS NOT NULL;
 
 CREATE TABLE dbo.Genres (
   GenreId INT IDENTITY(1,1) PRIMARY KEY,

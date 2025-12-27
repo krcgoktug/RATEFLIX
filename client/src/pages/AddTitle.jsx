@@ -17,9 +17,12 @@ export default function AddTitle() {
     isFavorite: false,
     genres: []
   });
-  const [poster, setPoster] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const toggleFavorite = () => {
+    setForm((prev) => ({ ...prev, isFavorite: !prev.isFavorite }));
+  };
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -54,10 +57,6 @@ export default function AddTitle() {
       payload.append('watchedAt', form.watchedAt || '');
       payload.append('isFavorite', form.isFavorite);
       payload.append('genres', JSON.stringify(form.genres));
-      if (poster) {
-        payload.append('poster', poster);
-      }
-
       await api.post('/titles', payload);
       navigate(form.status === 'watched' ? '/watched' : '/watchlist');
     } catch (err) {
@@ -122,7 +121,10 @@ export default function AddTitle() {
           Genres (multi-select)
           <div className="genre-grid">
             {GENRES.map((genre) => (
-              <label key={genre} className="chip">
+              <label
+                key={genre}
+                className={`chip ${form.genres.includes(genre) ? 'selected' : ''}`}
+              >
                 <input
                   type="checkbox"
                   checked={form.genres.includes(genre)}
@@ -134,20 +136,23 @@ export default function AddTitle() {
           </div>
         </label>
 
-        <label>
-          Poster upload
-          <input type="file" accept="image/*" onChange={(e) => setPoster(e.target.files[0])} />
-        </label>
-
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            name="isFavorite"
-            checked={form.isFavorite}
-            onChange={handleChange}
-          />
-          Add to favorites
-        </label>
+        <div className="favorite-row">
+          <span>Add to favorites</span>
+          <button
+            className={`icon-btn heart ${form.isFavorite ? 'active' : ''}`}
+            type="button"
+            onClick={toggleFavorite}
+            aria-pressed={form.isFavorite}
+            aria-label="Add to favorites"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0115.5 3C18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.68L12 20.5z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
 
         {form.status === 'watched' && (
           <div className="grid two">

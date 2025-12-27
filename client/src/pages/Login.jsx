@@ -55,7 +55,7 @@ export default function Login() {
               type="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="??????"
+              placeholder="******"
               required
             />
           </label>

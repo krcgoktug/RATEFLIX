@@ -1,0 +1,8 @@
+<svg width="320" height="180" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" rx="22" fill="#161a22"/>
+  <circle cx="70" cy="90" r="34" fill="#fbb034"/>
+  <path d="M60 90l20-12v24l-20-12z" fill="#161a22"/>
+  <text x="120" y="98" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#f5f6f8">
+    RATEFLIX
+  </text>
+</svg>
