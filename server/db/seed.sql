@@ -1,21 +1,205 @@
 -- Sample data for development
 INSERT INTO dbo.Genres (Name)
-VALUES ('Action'), ('Drama'), ('Sci-Fi'), ('Comedy'), ('Animation'), ('Adventure');
-
-INSERT INTO dbo.Titles (Title, TitleType, ReleaseYear, PosterPath)
 VALUES
-  ('Across the Spider-Verse', 'Movie', 2023, NULL),
-  ('The Bear', 'Series', 2022, NULL),
-  ('Interstellar', 'Movie', 2014, NULL),
-  ('Stranger Things', 'Series', 2016, NULL);
+  ('Action'),
+  ('Adventure'),
+  ('Animation'),
+  ('Comedy'),
+  ('Crime'),
+  ('Drama'),
+  ('Fantasy'),
+  ('Mystery'),
+  ('Romance'),
+  ('Sci-Fi'),
+  ('Thriller');
 
--- Map genres (assumes identity starting at 1)
+INSERT INTO dbo.Titles (Title, TitleType, ReleaseYear, PosterPath, TmdbId, TmdbType)
+VALUES
+  ('Spider-Man: Across the Spider-Verse', 'Movie', 2023, 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg', 569094, 'movie'),
+  ('Interstellar', 'Movie', 2014, 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', 157336, 'movie'),
+  ('Stranger Things', 'Series', 2016, 'https://image.tmdb.org/t/p/w500/x2LSRK2Cm7MZhjluni1msVJ3wDF.jpg', 66732, 'tv'),
+  ('Dune: Part Two', 'Movie', 2024, 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg', 693134, 'movie'),
+  ('The Dark Knight', 'Movie', 2008, 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg', 155, 'movie'),
+  ('Oppenheimer', 'Movie', 2023, 'https://image.tmdb.org/t/p/w500/ptpr0kGAckfQkJeJIt8st5dglvd.jpg', 872585, 'movie'),
+  ('Avatar: The Way of Water', 'Movie', 2022, 'https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg', 76600, 'movie'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Movie', 2001, 'https://image.tmdb.org/t/p/w500/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg', 120, 'movie'),
+  ('Breaking Bad', 'Series', 2008, 'https://image.tmdb.org/t/p/w500/3xnWaLQjelJDDF7LT1WBo6f4BRe.jpg', 1396, 'tv'),
+  ('The Last of Us', 'Series', 2023, 'https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg', 100088, 'tv'),
+  ('Arcane', 'Series', 2021, 'https://image.tmdb.org/t/p/w500/fqldf2t8ztc9aiwn3k6mlX3tvRT.jpg', 94605, 'tv'),
+  ('The Mandalorian', 'Series', 2019, 'https://image.tmdb.org/t/p/w500/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg', 82856, 'tv'),
+  ('Your Name', 'Movie', 2016, 'https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg', 372058, 'movie'),
+  ('The Matrix', 'Movie', 1999, 'https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg', 603, 'movie'),
+  ('Inception', 'Movie', 2010, 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg', 27205, 'movie'),
+  ('The Dark Knight Rises', 'Movie', 2012, 'https://image.tmdb.org/t/p/w500/hr0L2aueqlP2BYUblTTjmtn0hw4.jpg', 49026, 'movie'),
+  ('Joker', 'Movie', 2019, 'https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg', 475557, 'movie'),
+  ('Parasite', 'Movie', 2019, 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg', 496243, 'movie'),
+  ('The Shawshank Redemption', 'Movie', 1994, 'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg', 278, 'movie'),
+  ('Fight Club', 'Movie', 1999, 'https://image.tmdb.org/t/p/w500/a26cQPRhJPX6GbWfQbvZdrrp9j9.jpg', 550, 'movie'),
+  ('Pulp Fiction', 'Movie', 1994, 'https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg', 680, 'movie'),
+  ('Forrest Gump', 'Movie', 1994, 'https://image.tmdb.org/t/p/w500/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg', 13, 'movie'),
+  ('The Godfather', 'Movie', 1972, 'https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg', 238, 'movie'),
+  ('The Godfather Part II', 'Movie', 1974, 'https://image.tmdb.org/t/p/w500/hek3koDUyRQk7FIhPXsa6mT2Zc3.jpg', 240, 'movie'),
+  ('The Avengers', 'Movie', 2012, 'https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg', 24428, 'movie'),
+  ('Avengers: Endgame', 'Movie', 2019, 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg', 299534, 'movie'),
+  ('Guardians of the Galaxy', 'Movie', 2014, 'https://image.tmdb.org/t/p/w500/r7vmZjiyZw9rpJMQJdXpjgiCOk9.jpg', 118340, 'movie'),
+  ('Star Wars: A New Hope', 'Movie', 1977, 'https://image.tmdb.org/t/p/w500/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg', 11, 'movie'),
+  ('The Batman', 'Movie', 2022, 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg', 414906, 'movie'),
+  ('The Prestige', 'Movie', 2006, 'https://image.tmdb.org/t/p/w500/tRNlZbgNCNOpLpbPEz5L8G8A0JN.jpg', 1124, 'movie'),
+  ('Whiplash', 'Movie', 2014, 'https://image.tmdb.org/t/p/w500/lIv1QinFqz4dlp5U4lQ6HaiskOZ.jpg', 244786, 'movie'),
+  ('La La Land', 'Movie', 2016, 'https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg', 313369, 'movie'),
+  ('Mad Max: Fury Road', 'Movie', 2015, 'https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg', 76341, 'movie'),
+  ('Game of Thrones', 'Series', 2011, 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg', 1399, 'tv'),
+  ('The Boys', 'Series', 2019, 'https://image.tmdb.org/t/p/w500/stTEycfG9928HYGEISBFaG1ngjM.jpg', 76479, 'tv'),
+  ('Chernobyl', 'Series', 2019, 'https://image.tmdb.org/t/p/w500/hlLXt2tOPT6RRnjiUmoxyG1LTFi.jpg', 87108, 'tv'),
+  ('Peaky Blinders', 'Series', 2013, 'https://image.tmdb.org/t/p/w500/bGZn5RVzMMXju4ev7xbl1aLdXqq.jpg', 60574, 'tv'),
+  ('House of the Dragon', 'Series', 2022, 'https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg', 94997, 'tv'),
+  ('Rick and Morty', 'Series', 2013, 'https://image.tmdb.org/t/p/w500/cvhNj9eoRBe5SxjCbQTkh05UP5K.jpg', 60625, 'tv'),
+  ('The Office', 'Series', 2005, 'https://image.tmdb.org/t/p/w500/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg', 2316, 'tv'),
+  ('Narcos', 'Series', 2015, 'https://image.tmdb.org/t/p/w500/rTmal9fDbwh5F0waol2hq35U4ah.jpg', 63351, 'tv'),
+  ('Kuzey Guney', 'Series', 2011, 'https://image.tmdb.org/t/p/w500/eG35U9iYp6cWigQxIpzwlPEPY0l.jpg', 42099, 'tv'),
+  ('Ask-i Memnu', 'Series', 2008, 'https://image.tmdb.org/t/p/w500/xHulNzEqtgkTuwrRorBRXdGzHML.jpg', 17635, 'tv'),
+  ('Ayla', 'Movie', 2017, 'https://image.tmdb.org/t/p/w500/ggtQgembIFKJcSSeuxJocOklasp.jpg', 472454, 'movie'),
+  ('Green Book', 'Movie', 2018, 'https://image.tmdb.org/t/p/w500/vEzS2VOhdpBIANoEYBHRvcaeBXD.jpg', 490132, 'movie'),
+  ('Ezel', 'Series', 2009, 'https://image.tmdb.org/t/p/w500/pHSjh4MINU2JnK7qQvjogQaX3wr.jpg', 32519, 'tv'),
+  ('Sahsiyet', 'Series', 2018, 'https://image.tmdb.org/t/p/w500/vnAsH4kvVVQYQZZ4pf3rJKx1fcR.jpg', 77994, 'tv'),
+  ('Kurtlar Vadisi', 'Series', 2003, 'https://image.tmdb.org/t/p/w500/yX6JEIijuH6KNCgO8I2yLKu2Psb.jpg', 34587, 'tv'),
+  ('7. Kogustaki Mucize', 'Movie', 2019, 'https://image.tmdb.org/t/p/w500/sOfUbzu6OUL5cscGODPdpHn9C1g.jpg', 637920, 'movie'),
+  ('Organize Isler', 'Movie', 2005, 'https://image.tmdb.org/t/p/w500/52EZHd5hKzBpfCXJCgAcVNE4GKO.jpg', 30634, 'movie');
+
 INSERT INTO dbo.TitleGenres (TitleId, GenreId)
-VALUES
-  (1, 3), (1, 5), (1, 6),
-  (2, 2), (2, 4),
-  (3, 2), (3, 3),
-  (4, 3), (4, 6);
+SELECT t.TitleId, g.GenreId
+FROM (VALUES
+  ('Spider-Man: Across the Spider-Verse', 'Animation'),
+  ('Spider-Man: Across the Spider-Verse', 'Action'),
+  ('Spider-Man: Across the Spider-Verse', 'Adventure'),
+  ('Spider-Man: Across the Spider-Verse', 'Sci-Fi'),
+  ('Interstellar', 'Drama'),
+  ('Interstellar', 'Sci-Fi'),
+  ('Interstellar', 'Adventure'),
+  ('Stranger Things', 'Drama'),
+  ('Stranger Things', 'Sci-Fi'),
+  ('Stranger Things', 'Mystery'),
+  ('Dune: Part Two', 'Sci-Fi'),
+  ('Dune: Part Two', 'Adventure'),
+  ('Dune: Part Two', 'Action'),
+  ('The Dark Knight', 'Action'),
+  ('The Dark Knight', 'Crime'),
+  ('The Dark Knight', 'Drama'),
+  ('The Dark Knight', 'Thriller'),
+  ('Oppenheimer', 'Drama'),
+  ('Oppenheimer', 'Thriller'),
+  ('Avatar: The Way of Water', 'Adventure'),
+  ('Avatar: The Way of Water', 'Sci-Fi'),
+  ('Avatar: The Way of Water', 'Action'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Adventure'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Fantasy'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Action'),
+  ('Breaking Bad', 'Crime'),
+  ('Breaking Bad', 'Drama'),
+  ('Breaking Bad', 'Thriller'),
+  ('The Last of Us', 'Drama'),
+  ('The Last of Us', 'Action'),
+  ('The Last of Us', 'Adventure'),
+  ('Arcane', 'Animation'),
+  ('Arcane', 'Action'),
+  ('Arcane', 'Adventure'),
+  ('The Mandalorian', 'Action'),
+  ('The Mandalorian', 'Adventure'),
+  ('The Mandalorian', 'Sci-Fi'),
+  ('Your Name', 'Animation'),
+  ('Your Name', 'Romance'),
+  ('Your Name', 'Fantasy'),
+  ('The Matrix', 'Action'),
+  ('The Matrix', 'Sci-Fi'),
+  ('The Matrix', 'Thriller'),
+  ('Inception', 'Action'),
+  ('Inception', 'Sci-Fi'),
+  ('Inception', 'Thriller'),
+  ('The Dark Knight Rises', 'Action'),
+  ('The Dark Knight Rises', 'Crime'),
+  ('The Dark Knight Rises', 'Drama'),
+  ('Joker', 'Crime'),
+  ('Joker', 'Drama'),
+  ('Joker', 'Thriller'),
+  ('Parasite', 'Drama'),
+  ('Parasite', 'Thriller'),
+  ('The Shawshank Redemption', 'Drama'),
+  ('The Shawshank Redemption', 'Crime'),
+  ('Fight Club', 'Drama'),
+  ('Fight Club', 'Thriller'),
+  ('Pulp Fiction', 'Crime'),
+  ('Pulp Fiction', 'Drama'),
+  ('Forrest Gump', 'Drama'),
+  ('Forrest Gump', 'Romance'),
+  ('The Godfather', 'Crime'),
+  ('The Godfather', 'Drama'),
+  ('The Godfather Part II', 'Crime'),
+  ('The Godfather Part II', 'Drama'),
+  ('The Avengers', 'Action'),
+  ('The Avengers', 'Adventure'),
+  ('The Avengers', 'Sci-Fi'),
+  ('Avengers: Endgame', 'Action'),
+  ('Avengers: Endgame', 'Adventure'),
+  ('Avengers: Endgame', 'Sci-Fi'),
+  ('Guardians of the Galaxy', 'Action'),
+  ('Guardians of the Galaxy', 'Adventure'),
+  ('Guardians of the Galaxy', 'Sci-Fi'),
+  ('Star Wars: A New Hope', 'Action'),
+  ('Star Wars: A New Hope', 'Adventure'),
+  ('Star Wars: A New Hope', 'Sci-Fi'),
+  ('The Batman', 'Crime'),
+  ('The Batman', 'Drama'),
+  ('The Batman', 'Thriller'),
+  ('The Prestige', 'Drama'),
+  ('The Prestige', 'Mystery'),
+  ('The Prestige', 'Thriller'),
+  ('Whiplash', 'Drama'),
+  ('La La Land', 'Drama'),
+  ('La La Land', 'Romance'),
+  ('Mad Max: Fury Road', 'Action'),
+  ('Mad Max: Fury Road', 'Adventure'),
+  ('Mad Max: Fury Road', 'Sci-Fi'),
+  ('Game of Thrones', 'Drama'),
+  ('Game of Thrones', 'Fantasy'),
+  ('Game of Thrones', 'Adventure'),
+  ('The Boys', 'Action'),
+  ('The Boys', 'Sci-Fi'),
+  ('The Boys', 'Crime'),
+  ('Chernobyl', 'Drama'),
+  ('Chernobyl', 'Thriller'),
+  ('Peaky Blinders', 'Crime'),
+  ('Peaky Blinders', 'Drama'),
+  ('House of the Dragon', 'Drama'),
+  ('House of the Dragon', 'Fantasy'),
+  ('House of the Dragon', 'Action'),
+  ('Rick and Morty', 'Animation'),
+  ('Rick and Morty', 'Sci-Fi'),
+  ('Rick and Morty', 'Comedy'),
+  ('The Office', 'Comedy'),
+  ('Narcos', 'Crime'),
+  ('Narcos', 'Drama'),
+  ('Narcos', 'Thriller'),
+  ('Kuzey Guney', 'Drama'),
+  ('Ask-i Memnu', 'Drama'),
+  ('Ask-i Memnu', 'Romance'),
+  ('Ayla', 'Drama'),
+  ('Green Book', 'Drama'),
+  ('Green Book', 'Comedy'),
+  ('Ezel', 'Crime'),
+  ('Ezel', 'Drama'),
+  ('Ezel', 'Thriller'),
+  ('Sahsiyet', 'Crime'),
+  ('Sahsiyet', 'Drama'),
+  ('Sahsiyet', 'Thriller'),
+  ('Kurtlar Vadisi', 'Crime'),
+  ('Kurtlar Vadisi', 'Drama'),
+  ('Kurtlar Vadisi', 'Action'),
+  ('7. Kogustaki Mucize', 'Drama'),
+  ('Organize Isler', 'Comedy'),
+  ('Organize Isler', 'Crime')
+) AS v(Title, Genre)
+JOIN dbo.Titles t ON t.Title = v.Title
+JOIN dbo.Genres g ON g.Name = v.Genre;
 
 -- Create a demo user (replace PasswordHash with a real bcrypt hash)
 INSERT INTO dbo.Users (FirstName, LastName, Email, PasswordHash)
@@ -23,8 +207,21 @@ VALUES ('Goktug', 'Krc', 'demo@rateflix.com', 'CHANGE_ME_HASH');
 
 -- Add titles to demo user list (UserId = 1)
 INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-VALUES
-  (1, 1, 'watched', 9, 'Stylish and emotional.', '2024-02-10', 1),
-  (1, 2, 'watchlist', NULL, NULL, NULL, 0),
-  (1, 3, 'watched', 10, 'All-time favorite.', '2024-01-18', 1),
-  (1, 4, 'watchlist', NULL, NULL, NULL, 0);
+SELECT 1, t.TitleId, 'watched', 9, 'Stylish and emotional.', '2024-02-10', 1
+FROM dbo.Titles t
+WHERE t.Title = 'Spider-Man: Across the Spider-Verse';
+
+INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
+SELECT 1, t.TitleId, 'watched', 10, 'All-time favorite.', '2024-01-18', 1
+FROM dbo.Titles t
+WHERE t.Title = 'Interstellar';
+
+INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
+SELECT 1, t.TitleId, 'watchlist', NULL, NULL, NULL, 0
+FROM dbo.Titles t
+WHERE t.Title = 'Stranger Things';
+
+INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
+SELECT 1, t.TitleId, 'watchlist', NULL, NULL, NULL, 0
+FROM dbo.Titles t
+WHERE t.Title = 'The Dark Knight';

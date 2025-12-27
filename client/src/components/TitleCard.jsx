@@ -1,15 +1,17 @@
 import StatusPill from './StatusPill.jsx';
 import { clampText } from '../utils/format.js';
+import { resolvePosterUrl } from '../utils/media.js';
 
 export default function TitleCard({ item, onSelect, actions }) {
-  const posterStyle = item.PosterPath
-    ? { backgroundImage: `url(${item.PosterPath})` }
+  const posterUrl = resolvePosterUrl(item.PosterPath);
+  const posterStyle = posterUrl
+    ? { backgroundImage: `url(${posterUrl})` }
     : { backgroundImage: 'linear-gradient(135deg, #1d1f2a, #2a2f3b)' };
 
   return (
     <article className="title-card">
       <button className="poster" type="button" style={posterStyle} onClick={onSelect}>
-        {!item.PosterPath && <span className="poster-placeholder">No Poster</span>}
+        {!posterUrl && <span className="poster-logo-text">RATEFLIX</span>}
       </button>
       <div className="title-card-body">
         <div className="title-row">

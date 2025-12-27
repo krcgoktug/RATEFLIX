@@ -6,7 +6,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 - Authentication: register, login, profile, change password
 - Dashboard: totals, average rating, recent watched, featured card
 - Watchlist & Watched lists with update/remove actions
-- Add Movie/Series with poster upload, status, rating, review
+- Add Movie/Series with status, rating, review, favorites
 - Detail page with update/delete actions
 - Favorites page
 - Explore page with search and filters
@@ -27,10 +27,11 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 2. Create an MSSQL database named `Rateflix`
 3. Run SQL scripts in this order:
    - `server/db/schema.sql`
-   - `server/db/seed.sql` (optional sample data)
+   - `server/db/seed.sql` (optional sample data, 50 titles)
+   - Or run `npm --prefix server run init-db:seed` / `npm --prefix server run seed:titles` after configuring `.env`
 4. Configure server environment:
    - Copy `server/.env.example` to `server/.env`
-   - Fill in MSSQL connection values and `JWT_SECRET`
+   - Fill in MSSQL connection values, `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
 5. Install dependencies:
    - `npm install`
    - `npm --prefix server install`
@@ -50,6 +51,14 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
   - Internal: `<style>` inside `client/index.html`
   - Inline: status badges in `client/src/components/StatusPill.jsx`
 - JavaScript function: `client/src/utils/format.js`
+
+## TMDB Integration
+TMDB is used as an external data source for search and import. Add your TMDB API key to `server/.env` to enable:
+- `GET /api/tmdb/search` (search TMDB)
+- `POST /api/tmdb/import` (import a title into MSSQL)
+
+## Sample Data
+`server/db/seed.sql` includes 50 movie/series entries with TMDB posters for the Explore page.
 
 ## Report
 Update `report/Report.md` with your real names, student numbers, and screenshots.

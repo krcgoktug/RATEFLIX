@@ -65,7 +65,7 @@ export default function Dashboard() {
                     <div>
                       <div className="recent-title">{item.Title}</div>
                       <div className="recent-meta">
-                        {item.TitleType} ? {formatDate(item.WatchedAt)}
+                        {item.TitleType} - {formatDate(item.WatchedAt)}
                       </div>
                     </div>
                     <div className="recent-rating">{formatRating(item.Rating)}</div>

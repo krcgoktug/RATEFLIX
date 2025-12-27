@@ -78,7 +78,7 @@ export default function Watched() {
           {sorted.map((item) => (
             <TitleCard
               key={item.UserTitleId}
-              item={{ ...item, Review: `${formatRating(item.Rating)} ? ${formatDate(item.WatchedAt)}` }}
+              item={{ ...item, Review: `${formatRating(item.Rating)} - ${formatDate(item.WatchedAt)}` }}
               onSelect={() => navigate(`/title/${item.TitleId}`)}
               actions={
                 <>

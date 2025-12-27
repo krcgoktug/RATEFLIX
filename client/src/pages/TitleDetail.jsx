@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx';
 import StatusPill from '../components/StatusPill.jsx';
 import api from '../api/client.js';
 import { formatRating } from '../utils/format.js';
+import { resolvePosterUrl } from '../utils/media.js';
 
 export default function TitleDetail() {
   const { id } = useParams();
@@ -80,19 +81,22 @@ export default function TitleDetail() {
     );
   }
 
-  const posterStyle = title.PosterPath
-    ? { backgroundImage: `url(${title.PosterPath})` }
+  const posterUrl = resolvePosterUrl(title.PosterPath);
+  const posterStyle = posterUrl
+    ? { backgroundImage: `url(${posterUrl})` }
     : { backgroundImage: 'linear-gradient(135deg, #1d1f2a, #2a2f3b)' };
 
   return (
     <Layout>
       <div className="detail-grid">
-        <div className="detail-poster" style={posterStyle}></div>
+        <div className="detail-poster" style={posterStyle}>
+          {!posterUrl && <span className="poster-logo-text">RATEFLIX</span>}
+        </div>
         <div className="detail-info">
           <div className="detail-header">
             <div>
               <h2>{title.Title}</h2>
-              <p className="muted">{title.TitleType} ? {title.ReleaseYear}</p>
+              <p className="muted">{title.TitleType} - {title.ReleaseYear}</p>
               {title.Genres && <p className="muted">{title.Genres}</p>}
             </div>
             {userTitle && <StatusPill status={userTitle.Status} />}
