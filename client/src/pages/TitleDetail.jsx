@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import StatusPill from '../components/StatusPill.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import Loader from '../components/Loader.jsx';
 import api from '../api/client.js';
 import { formatRating } from '../utils/format.js';
 import { resolvePosterUrl } from '../utils/media.js';
@@ -13,8 +15,11 @@ export default function TitleDetail() {
   const [userTitle, setUserTitle] = useState(null);
   const [form, setForm] = useState({ status: 'watchlist', rating: '', review: '', watchedAt: '', isFavorite: false });
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setMessage('');
     try {
       const [titleRes, userRes] = await Promise.all([
         api.get(`/titles/${id}`),
@@ -34,6 +39,8 @@ export default function TitleDetail() {
       }
     } catch (err) {
       setTitle(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,10 +80,26 @@ export default function TitleDetail() {
     loadData();
   };
 
+  if (loading) {
+    return (
+      <Layout>
+        <Loader label="Loading title details..." />
+      </Layout>
+    );
+  }
+
   if (!title) {
     return (
       <Layout>
-        <p className="muted">Loading title details...</p>
+        <EmptyState
+          title="Title not found"
+          description="We could not load this title. Try again from Explore."
+          action={
+            <button className="btn primary" type="button" onClick={() => navigate('/explore')}>
+              Back to explore
+            </button>
+          }
+        />
       </Layout>
     );
   }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import TitleCard from '../components/TitleCard.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import LoadingGrid from '../components/LoadingGrid.jsx';
 import api from '../api/client.js';
 import { GENRES } from '../data/genres.js';
 
@@ -168,7 +169,7 @@ export default function Explore() {
       {message && <div className="alert">{message}</div>}
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <LoadingGrid count={9} />
       ) : items.length === 0 ? (
         <EmptyState
           title="No titles found"
