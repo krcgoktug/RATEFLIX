@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const navItems = [
   {
@@ -111,22 +112,54 @@ const navItems = [
 ];
 
 export default function MobileNav() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <nav className="mobile-nav" aria-label="Primary">
-      {navItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
-          }
-        >
-          <span className="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">{item.icon}</svg>
-          </span>
-          <span className="nav-label">{item.label}</span>
-        </NavLink>
-      ))}
+      <div className="mobile-nav-items">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
+            }
+          >
+            <span className="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">{item.icon}</svg>
+            </span>
+            <span className="nav-label">{item.label}</span>
+          </NavLink>
+        ))}
+      </div>
+      <button className="mobile-logout" type="button" onClick={handleLogout}>
+        <span className="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M10 17l-4-4 4-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6 13h9a3 3 0 003-3V7a3 3 0 00-3-3H9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+        <span>Log out</span>
+      </button>
     </nav>
   );
 }

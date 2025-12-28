@@ -40,12 +40,12 @@ export default function Sidebar() {
           <div className="user-initials">
             {(user?.FirstName || 'U').slice(0, 1)}
           </div>
-          <div>
-            <div className="user-name">
-              {user?.FirstName || 'User'} {user?.LastName || ''}
-            </div>
-            <div className="user-email">{user?.Email || 'user@rateflix.com'}</div>
+        <div className="user-meta">
+          <div className="user-name">
+            {user?.FirstName || 'User'} {user?.LastName || ''}
           </div>
+          <div className="user-email">{user?.Email || 'user@rateflix.com'}</div>
+        </div>
         </div>
         <button className="btn ghost" type="button" onClick={handleLogout}>
           Log out
