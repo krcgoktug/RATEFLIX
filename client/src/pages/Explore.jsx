@@ -11,6 +11,7 @@ export default function Explore() {
   const [searchText, setSearchText] = useState('');
   const [filters, setFilters] = useState({ type: '', year: '', genre: '' });
   const [items, setItems] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
@@ -30,7 +31,18 @@ export default function Explore() {
 
   useEffect(() => {
     loadItems();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const response = await api.get('/user-titles?favorite=true');
+      const ids = (response.data.items || []).map((item) => item.TitleId);
+      setFavoriteIds(ids);
+    } catch (err) {
+      setFavoriteIds([]);
+    }
+  };
 
   const handleSearchChange = (event) => {
     setSearchText(event.target.value);
@@ -62,29 +74,29 @@ export default function Explore() {
     }
   };
 
-  const handleFavorite = async (item) => {
+  const handleToggleFavorite = async (item) => {
+    const isFavorite = favoriteIds.includes(item.TitleId);
     try {
-      await api.post('/user-titles', {
-        titleId: item.TitleId,
-        status: 'watchlist',
-        isFavorite: true
-      });
-      setMessage('Added to favorites.');
-    } catch (err) {
-      if (err.response?.status === 409) {
-        try {
-          const existing = await api.get(`/user-titles?titleId=${item.TitleId}`);
-          const entry = existing.data.items?.[0];
-          if (entry) {
-            await api.patch(`/user-titles/${entry.UserTitleId}`, { isFavorite: true });
-            setMessage('Marked as favorite.');
-            return;
-          }
-        } catch (innerErr) {
-          // fall through
-        }
+      const existing = await api.get(`/user-titles?titleId=${item.TitleId}`);
+      const entry = existing.data.items?.[0];
+      if (entry) {
+        await api.patch(`/user-titles/${entry.UserTitleId}`, { isFavorite: !isFavorite });
+      } else if (!isFavorite) {
+        await api.post('/user-titles', {
+          titleId: item.TitleId,
+          status: 'watchlist',
+          isFavorite: true
+        });
       }
-      setMessage(err.response?.data?.message || 'Could not add to favorites.');
+      setFavoriteIds((prev) => {
+        if (isFavorite) {
+          return prev.filter((id) => id !== item.TitleId);
+        }
+        return [...new Set([...prev, item.TitleId])];
+      });
+      setMessage(isFavorite ? 'Removed from favorites.' : 'Added to favorites.');
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Could not update favorite.');
     }
   };
 
@@ -182,33 +194,41 @@ export default function Explore() {
         />
       ) : (
         <div className="card-grid">
-          {items.map((item) => (
-            <TitleCard
-              key={item.TitleId}
-              item={item}
-              onSelect={() => navigate(`/title/${item.TitleId}`)}
-              actions={
-                <div className="actions-row">
-                  <button className="btn" type="button" onClick={() => handleAdd(item)}>
-                    Add to watchlist
-                  </button>
-                  <button
-                    className="icon-btn heart"
-                    type="button"
-                    onClick={() => handleFavorite(item)}
-                    aria-label="Add to favorites"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0115.5 3C18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.68L12 20.5z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              }
-            />
-          ))}
+          {items.map((item) => {
+            const isFavorite = favoriteIds.includes(item.TitleId);
+            return (
+              <TitleCard
+                key={item.TitleId}
+                item={item}
+                onSelect={() => navigate(`/title/${item.TitleId}`)}
+                actions={
+                  <div className="actions-row">
+                    <button className="btn" type="button" onClick={() => handleAdd(item)}>
+                      Add to watchlist
+                    </button>
+                    <button
+                      className={`icon-btn heart${isFavorite ? ' active' : ''}`}
+                      type="button"
+                      onClick={() => handleToggleFavorite(item)}
+                      aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      aria-pressed={isFavorite}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0115.5 3C18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.68L12 20.5z"
+                          fill={isFavorite ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                }
+              />
+            );
+          })}
         </div>
       )}
     </Layout>
