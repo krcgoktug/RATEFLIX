@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import HeroCard from '../components/HeroCard.jsx';
+import Loader from '../components/Loader.jsx';
 import api from '../api/client.js';
 import { formatRating, formatDate } from '../utils/format.js';
 
@@ -55,7 +56,7 @@ export default function Dashboard() {
               <Link to="/watched" className="link">See all</Link>
             </div>
             {loading ? (
-              <p className="muted">Loading...</p>
+              <Loader label="Loading activity..." />
             ) : data.recent.length === 0 ? (
               <p className="muted">No watched titles yet.</p>
             ) : (

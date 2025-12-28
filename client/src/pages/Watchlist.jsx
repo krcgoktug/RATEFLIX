@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import TitleCard from '../components/TitleCard.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import LoadingGrid from '../components/LoadingGrid.jsx';
 import api from '../api/client.js';
 
 export default function Watchlist() {
@@ -65,7 +66,7 @@ export default function Watchlist() {
       </div>
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <LoadingGrid count={6} />
       ) : filtered.length === 0 ? (
         <EmptyState
           title="Your watchlist is empty"

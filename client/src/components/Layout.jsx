@@ -1,5 +1,6 @@
 import Topbar from './Topbar.jsx';
 import Sidebar from './Sidebar.jsx';
+import MobileNav from './MobileNav.jsx';
 
 export default function Layout({ children, variant = 'app' }) {
   return (
@@ -10,6 +11,7 @@ export default function Layout({ children, variant = 'app' }) {
         <Topbar variant={variant} />
         <main className="app-content">{children}</main>
       </div>
+      {variant === 'app' && <MobileNav />}
     </div>
   );
 }
