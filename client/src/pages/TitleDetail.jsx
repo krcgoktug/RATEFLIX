@@ -56,6 +56,10 @@ export default function TitleDetail() {
     });
   };
 
+  const handleToggleFavorite = () => {
+    setForm((prev) => ({ ...prev, isFavorite: !prev.isFavorite }));
+  };
+
   const handleSave = async () => {
     if (!userTitle) return;
     await api.patch(`/user-titles/${userTitle.UserTitleId}`, {
@@ -152,15 +156,27 @@ export default function TitleDetail() {
                 Review
                 <textarea name="review" rows="3" value={form.review} onChange={handleChange}></textarea>
               </label>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  name="isFavorite"
-                  checked={form.isFavorite}
-                  onChange={handleChange}
-                />
-                Mark as favorite
-              </label>
+              <div className="favorite-row">
+                <span>Mark as favorite</span>
+                <button
+                  className={`icon-btn heart${form.isFavorite ? ' active' : ''}`}
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  aria-label={form.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  aria-pressed={form.isFavorite}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0115.5 3C18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.68L12 20.5z"
+                      fill={form.isFavorite ? 'currentColor' : 'none'}
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
               <div className="detail-actions">
                 <button className="btn primary" type="button" onClick={handleSave}>
                   Save
