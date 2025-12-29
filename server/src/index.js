@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 
+const { getPool } = require('./db');
 const authRoutes = require('./routes/auth');
 const titlesRoutes = require('./routes/titles');
 const userTitlesRoutes = require('./routes/userTitles');
@@ -24,8 +25,15 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true });
+app.get('/api/health', async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1 AS ok');
+    res.json({ ok: true, db: true });
+  } catch (err) {
+    console.error('Health check failed', err);
+    res.json({ ok: false, db: false });
+  }
 });
 
 app.use('/api/auth', authRoutes);
