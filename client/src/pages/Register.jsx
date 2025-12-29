@@ -25,11 +25,32 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const response = await api.post('/auth/register', form);
-      login(response.data);
-      navigate('/dashboard');
+      const attemptRegister = async () => {
+        const response = await api.post('/auth/register', form);
+        login(response.data);
+        navigate('/dashboard');
+      };
+
+      await attemptRegister();
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      const shouldRetry = !err.response || err.response.status >= 500;
+      if (shouldRetry) {
+        setError('Server is waking up. Retrying...');
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        try {
+          const response = await api.post('/auth/register', form);
+          login(response.data);
+          navigate('/dashboard');
+          return;
+        } catch (retryErr) {
+          setError(
+            retryErr.response?.data?.message ||
+              'Server is waking up. Please try again in a few seconds.'
+          );
+        }
+      } else {
+        setError(err.response?.data?.message || 'Registration failed.');
+      }
     } finally {
       setLoading(false);
     }

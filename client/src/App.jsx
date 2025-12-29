@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import api from './api/client.js';
 import { useAuth } from './context/AuthContext.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -26,6 +28,10 @@ function HomeRedirect() {
 }
 
 export default function App() {
+  useEffect(() => {
+    api.get('/health').catch(() => {});
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<HomeRedirect />} />

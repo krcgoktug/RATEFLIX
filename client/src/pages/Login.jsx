@@ -20,11 +20,32 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', form);
-      login(response.data);
-      navigate('/dashboard');
+      const attemptLogin = async () => {
+        const response = await api.post('/auth/login', form);
+        login(response.data);
+        navigate('/dashboard');
+      };
+
+      await attemptLogin();
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed.');
+      const shouldRetry = !err.response || err.response.status >= 500;
+      if (shouldRetry) {
+        setError('Server is waking up. Retrying...');
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        try {
+          const response = await api.post('/auth/login', form);
+          login(response.data);
+          navigate('/dashboard');
+          return;
+        } catch (retryErr) {
+          setError(
+            retryErr.response?.data?.message ||
+              'Server is waking up. Please try again in a few seconds.'
+          );
+        }
+      } else {
+        setError(err.response?.data?.message || 'Login failed.');
+      }
     } finally {
       setLoading(false);
     }
