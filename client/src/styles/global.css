@@ -493,6 +493,27 @@ a {
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
+.hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: center;
+  justify-self: center;
+  justify-content: center;
+  width: min(100%, 520px);
+}
+
+.hero-info h2 {
+  font-size: clamp(2.3rem, 2vw + 1.6rem, 3.1rem);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.hero-info p {
+  color: var(--muted);
+  font-size: clamp(1.1rem, 0.6vw + 0.95rem, 1.35rem);
+}
+
 .hero-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.16);
@@ -502,11 +523,12 @@ a {
   color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.08em;
+  font-size: 1.05rem;
 }
 
 .hero-rating {
-  margin-top: 12px;
-  font-size: 1.2rem;
+  margin-top: 10px;
+  font-size: clamp(1.55rem, 1vw + 1.1rem, 2rem);
   color: var(--accent-2);
 }
 
