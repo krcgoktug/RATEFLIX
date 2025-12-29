@@ -498,7 +498,8 @@ a {
   flex-direction: column;
   gap: 14px;
   align-self: center;
-  justify-self: center;
+  justify-self: start;
+  align-items: flex-start;
   justify-content: center;
   width: min(100%, 520px);
 }
