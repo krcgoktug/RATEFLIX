@@ -2,6 +2,11 @@
 
 RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, favorites) built for an Internet Programming term project. The design is inspired by media dashboards with a blurred background theme and a clean, easy-to-understand UI.
 
+## 🔗 Live Links
+- 🌐 Live site: https://rateflix-lime.vercel.app
+- 🧠 API health: https://rateflix-api.onrender.com/api/health
+- 💻 GitHub: https://github.com/krcgoktug/RATEFLIX
+
 ## Features
 - Authentication: register, login, profile, change password
 - Dashboard: totals, average rating, recent watched, featured card
