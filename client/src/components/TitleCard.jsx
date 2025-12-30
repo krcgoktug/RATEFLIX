@@ -7,9 +7,11 @@ export default function TitleCard({ item, onSelect, actions }) {
   const posterStyle = posterUrl
     ? { backgroundImage: `url(${posterUrl})` }
     : { backgroundImage: 'linear-gradient(135deg, #1d1f2a, #2a2f3b)' };
+  const normalizedStatus =
+    item.Status === 'watched' ? 'watched' : item.Status === 'watchlist' ? 'watchlist' : '';
 
   return (
-    <article className="title-card">
+    <article className="title-card" data-status={normalizedStatus || undefined}>
       <button className="poster" type="button" style={posterStyle} onClick={onSelect}>
         {!posterUrl && <span className="poster-logo-text">RATEFLIX</span>}
       </button>

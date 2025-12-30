@@ -12,6 +12,7 @@ export default function Explore() {
   const [filters, setFilters] = useState({ type: '', year: '', genre: '' });
   const [items, setItems] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [userTitleMap, setUserTitleMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
@@ -31,15 +32,28 @@ export default function Explore() {
 
   useEffect(() => {
     loadItems();
-    loadFavorites();
+    loadUserTitles();
   }, []);
 
-  const loadFavorites = async () => {
+  const loadUserTitles = async () => {
     try {
-      const response = await api.get('/user-titles?favorite=true');
-      const ids = (response.data.items || []).map((item) => item.TitleId);
-      setFavoriteIds(ids);
+      const response = await api.get('/user-titles');
+      const map = {};
+      const favorites = [];
+      (response.data.items || []).forEach((item) => {
+        map[item.TitleId] = {
+          status: item.Status,
+          userTitleId: item.UserTitleId,
+          isFavorite: item.IsFavorite
+        };
+        if (item.IsFavorite) {
+          favorites.push(item.TitleId);
+        }
+      });
+      setUserTitleMap(map);
+      setFavoriteIds(favorites);
     } catch (err) {
+      setUserTitleMap({});
       setFavoriteIds([]);
     }
   };
@@ -67,7 +81,18 @@ export default function Explore() {
 
   const handleAdd = async (item) => {
     try {
-      await api.post('/user-titles', { titleId: item.TitleId, status: 'watchlist' });
+      const response = await api.post('/user-titles', {
+        titleId: item.TitleId,
+        status: 'watchlist'
+      });
+      setUserTitleMap((prev) => ({
+        ...prev,
+        [item.TitleId]: {
+          status: 'watchlist',
+          userTitleId: response.data.userTitleId,
+          isFavorite: prev[item.TitleId]?.isFavorite || false
+        }
+      }));
       setMessage('Added to watchlist.');
     } catch (err) {
       setMessage(err.response?.data?.message || 'Could not add title.');
@@ -77,22 +102,41 @@ export default function Explore() {
   const handleToggleFavorite = async (item) => {
     const isFavorite = favoriteIds.includes(item.TitleId);
     try {
-      const existing = await api.get(`/user-titles?titleId=${item.TitleId}`);
-      const entry = existing.data.items?.[0];
-      if (entry) {
-        await api.patch(`/user-titles/${entry.UserTitleId}`, { isFavorite: !isFavorite });
+      const entry = userTitleMap[item.TitleId];
+      if (entry?.userTitleId) {
+        await api.patch(`/user-titles/${entry.userTitleId}`, { isFavorite: !isFavorite });
       } else if (!isFavorite) {
-        await api.post('/user-titles', {
+        const response = await api.post('/user-titles', {
           titleId: item.TitleId,
           status: 'watchlist',
           isFavorite: true
         });
+        setUserTitleMap((prev) => ({
+          ...prev,
+          [item.TitleId]: {
+            status: 'watchlist',
+            userTitleId: response.data.userTitleId,
+            isFavorite: true
+          }
+        }));
       }
       setFavoriteIds((prev) => {
         if (isFavorite) {
           return prev.filter((id) => id !== item.TitleId);
         }
         return [...new Set([...prev, item.TitleId])];
+      });
+      setUserTitleMap((prev) => {
+        if (!prev[item.TitleId]) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [item.TitleId]: {
+            ...prev[item.TitleId],
+            isFavorite: !isFavorite
+          }
+        };
       });
       setMessage(isFavorite ? 'Removed from favorites.' : 'Added to favorites.');
     } catch (err) {
@@ -196,15 +240,24 @@ export default function Explore() {
         <div className="card-grid">
           {items.map((item) => {
             const isFavorite = favoriteIds.includes(item.TitleId);
+            const status = userTitleMap[item.TitleId]?.status || '';
+            const isWatchlisted = status === 'watchlist';
+            const isWatched = status === 'watched';
+            const actionLabel = isWatched ? 'Watched' : isWatchlisted ? 'In watchlist' : 'Add to watchlist';
             return (
               <TitleCard
                 key={item.TitleId}
-                item={item}
+                item={{ ...item, Status: status }}
                 onSelect={() => navigate(`/title/${item.TitleId}`)}
                 actions={
                   <div className="actions-row">
-                    <button className="btn" type="button" onClick={() => handleAdd(item)}>
-                      Add to watchlist
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => handleAdd(item)}
+                      disabled={isWatchlisted || isWatched}
+                    >
+                      {actionLabel}
                     </button>
                     <button
                       className={`icon-btn heart${isFavorite ? ' active' : ''}`}
