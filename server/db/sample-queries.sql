@@ -1,25 +1,27 @@
 -- Example queries for the report
 -- 1) Dashboard summary
 SELECT
-  COUNT(*) AS TotalTitles,
-  SUM(CASE WHEN Status = 'watchlist' THEN 1 ELSE 0 END) AS WatchlistCount,
-  SUM(CASE WHEN Status = 'watched' THEN 1 ELSE 0 END) AS WatchedCount,
-  AVG(CAST(Rating AS FLOAT)) AS AvgRating
-FROM dbo.UserTitles
-WHERE UserId = 1;
+  COUNT(*) AS total_titles,
+  SUM(CASE WHEN status = 'watchlist' THEN 1 ELSE 0 END) AS watchlist_count,
+  SUM(CASE WHEN status = 'watched' THEN 1 ELSE 0 END) AS watched_count,
+  AVG(rating::NUMERIC) AS avg_rating
+FROM user_titles
+WHERE user_id = 1;
 
 -- 2) Recent watched list
-SELECT TOP 5 t.Title, t.TitleType, ut.Rating, ut.WatchedAt
-FROM dbo.UserTitles ut
-INNER JOIN dbo.Titles t ON ut.TitleId = t.TitleId
-WHERE ut.UserId = 1 AND ut.Status = 'watched'
-ORDER BY ut.WatchedAt DESC;
+SELECT t.title, t.title_type, ut.rating, ut.watched_at
+FROM user_titles ut
+INNER JOIN titles t ON ut.title_id = t.title_id
+WHERE ut.user_id = 1 AND ut.status = 'watched'
+ORDER BY ut.watched_at DESC
+LIMIT 5;
 
 -- 3) Most watched genre
-SELECT TOP 1 g.Name, COUNT(*) AS Count
-FROM dbo.UserTitles ut
-INNER JOIN dbo.TitleGenres tg ON ut.TitleId = tg.TitleId
-INNER JOIN dbo.Genres g ON tg.GenreId = g.GenreId
-WHERE ut.UserId = 1 AND ut.Status = 'watched'
-GROUP BY g.Name
-ORDER BY COUNT(*) DESC;
+SELECT g.name, COUNT(*) AS count
+FROM user_titles ut
+INNER JOIN title_genres tg ON ut.title_id = tg.title_id
+INNER JOIN genres g ON tg.genre_id = g.genre_id
+WHERE ut.user_id = 1 AND ut.status = 'watched'
+GROUP BY g.name
+ORDER BY COUNT(*) DESC
+LIMIT 1;

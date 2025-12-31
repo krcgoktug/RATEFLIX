@@ -1,5 +1,5 @@
 const express = require('express');
-const { sql, getPool } = require('../db');
+const { getPool } = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,41 +11,36 @@ router.get('/', auth, async (req, res, next) => {
     const titleId = parseInt(req.query.titleId || '0', 10);
 
     const pool = await getPool();
-    const request = pool.request();
-    request.input('userId', sql.Int, req.user.userId);
-    request.input('status', sql.NVarChar, status);
-    request.input('favorite', sql.Bit, favorite ? 1 : 0);
-    request.input('titleId', sql.Int, Number.isNaN(titleId) ? 0 : titleId);
-
-    const result = await request.query(
+    const result = await pool.query(
       `SELECT
-         ut.UserTitleId,
-         ut.Status,
-         ut.Rating,
-         ut.Review,
-         ut.WatchedAt,
-         ut.IsFavorite,
-         ut.AddedAt,
-         t.TitleId,
-         t.Title,
-         t.TitleType,
-         t.ReleaseYear,
-         t.PosterPath,
-         STRING_AGG(g.Name, ', ') AS Genres
-       FROM UserTitles ut
-       INNER JOIN Titles t ON ut.TitleId = t.TitleId
-       LEFT JOIN TitleGenres tg ON tg.TitleId = t.TitleId
-       LEFT JOIN Genres g ON g.GenreId = tg.GenreId
-       WHERE ut.UserId = @userId
-         AND (@status = '' OR ut.Status = @status)
-         AND (@favorite = 0 OR ut.IsFavorite = 1)
-         AND (@titleId = 0 OR ut.TitleId = @titleId)
-       GROUP BY ut.UserTitleId, ut.Status, ut.Rating, ut.Review, ut.WatchedAt, ut.IsFavorite, ut.AddedAt,
-                t.TitleId, t.Title, t.TitleType, t.ReleaseYear, t.PosterPath
-       ORDER BY ut.AddedAt DESC`
+         ut.user_title_id AS "UserTitleId",
+         ut.status AS "Status",
+         ut.rating AS "Rating",
+         ut.review AS "Review",
+         ut.watched_at AS "WatchedAt",
+         ut.is_favorite AS "IsFavorite",
+         ut.added_at AS "AddedAt",
+         t.title_id AS "TitleId",
+         t.title AS "Title",
+         t.title_type AS "TitleType",
+         t.release_year AS "ReleaseYear",
+         t.poster_path AS "PosterPath",
+         STRING_AGG(g.name, ', ') AS "Genres"
+       FROM user_titles ut
+       INNER JOIN titles t ON ut.title_id = t.title_id
+       LEFT JOIN title_genres tg ON tg.title_id = t.title_id
+       LEFT JOIN genres g ON g.genre_id = tg.genre_id
+       WHERE ut.user_id = $1
+         AND ($2 = '' OR ut.status = $2)
+         AND ($3 = false OR ut.is_favorite = true)
+         AND ($4 = 0 OR ut.title_id = $4)
+       GROUP BY ut.user_title_id, ut.status, ut.rating, ut.review, ut.watched_at, ut.is_favorite, ut.added_at,
+                t.title_id, t.title, t.title_type, t.release_year, t.poster_path
+       ORDER BY ut.added_at DESC`,
+      [req.user.userId, status, favorite, Number.isNaN(titleId) ? 0 : titleId]
     );
 
-    return res.json({ items: result.recordset });
+    return res.json({ items: result.rows });
   } catch (err) {
     return next(err);
   }
@@ -71,32 +66,31 @@ router.post('/', auth, async (req, res, next) => {
 
     const pool = await getPool();
 
-    const exists = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .input('titleId', sql.Int, titleId)
-      .query('SELECT UserTitleId FROM UserTitles WHERE UserId = @userId AND TitleId = @titleId');
+    const exists = await pool.query(
+      'SELECT user_title_id FROM user_titles WHERE user_id = $1 AND title_id = $2',
+      [req.user.userId, titleId]
+    );
 
-    if (exists.recordset.length > 0) {
+    if (exists.rowCount > 0) {
       return res.status(409).json({ message: 'Title already in your list.' });
     }
 
-    const inserted = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .input('titleId', sql.Int, titleId)
-      .input('status', sql.NVarChar, normalizedStatus)
-      .input('rating', sql.Int, rating)
-      .input('review', sql.NVarChar, review || null)
-      .input('watchedAt', sql.Date, watchedDateValue)
-      .input('isFavorite', sql.Bit, isFavorite)
-      .query(
-        `INSERT INTO UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-         OUTPUT INSERTED.UserTitleId
-         VALUES (@userId, @titleId, @status, @rating, @review, @watchedAt, @isFavorite)`
-      );
+    const inserted = await pool.query(
+      `INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING user_title_id AS "UserTitleId"`,
+      [
+        req.user.userId,
+        titleId,
+        normalizedStatus,
+        rating,
+        review || null,
+        watchedDateValue,
+        isFavorite
+      ]
+    );
 
-    return res.status(201).json({ userTitleId: inserted.recordset[0].UserTitleId });
+    return res.status(201).json({ userTitleId: inserted.rows[0].UserTitleId });
   } catch (err) {
     return next(err);
   }
@@ -123,28 +117,28 @@ router.patch('/:id', auth, async (req, res, next) => {
       : null;
 
     const pool = await getPool();
-    const request = pool.request();
-    request.input('id', sql.Int, id);
-    request.input('userId', sql.Int, req.user.userId);
-    request.input('status', sql.NVarChar, normalizedStatus);
-    request.input('rating', sql.Int, rating);
-    request.input('review', sql.NVarChar, review || null);
-    request.input('watchedAt', sql.Date, watchedDateValue);
-    request.input('isFavorite', sql.Bit, isFavorite);
-
-    await request.query(
-      `UPDATE UserTitles
+    await pool.query(
+      `UPDATE user_titles
        SET
-         Status = COALESCE(@status, Status),
-         Rating = COALESCE(@rating, Rating),
-         Review = COALESCE(@review, Review),
-         WatchedAt = CASE
-           WHEN @status = 'watched' THEN @watchedAt
-           ELSE WatchedAt
+         status = COALESCE($3, status),
+         rating = COALESCE($4, rating),
+         review = COALESCE($5, review),
+         watched_at = CASE
+           WHEN $3 = 'watched' THEN $6
+           ELSE watched_at
          END,
-         IsFavorite = COALESCE(@isFavorite, IsFavorite),
-         UpdatedAt = SYSUTCDATETIME()
-       WHERE UserTitleId = @id AND UserId = @userId`
+         is_favorite = COALESCE($7, is_favorite),
+         updated_at = NOW()
+       WHERE user_title_id = $1 AND user_id = $2`,
+      [
+        id,
+        req.user.userId,
+        normalizedStatus,
+        rating,
+        review || null,
+        watchedDateValue,
+        isFavorite
+      ]
     );
 
     return res.json({ message: 'Updated.' });
@@ -161,11 +155,10 @@ router.delete('/:id', auth, async (req, res, next) => {
     }
 
     const pool = await getPool();
-    await pool
-      .request()
-      .input('id', sql.Int, id)
-      .input('userId', sql.Int, req.user.userId)
-      .query('DELETE FROM UserTitles WHERE UserTitleId = @id AND UserId = @userId');
+    await pool.query('DELETE FROM user_titles WHERE user_title_id = $1 AND user_id = $2', [
+      id,
+      req.user.userId
+    ]);
 
     return res.json({ message: 'Removed.' });
   } catch (err) {

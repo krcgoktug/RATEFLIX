@@ -1,50 +1,41 @@
-const sql = require('mssql');
+const { Pool } = require('pg');
 
-const config = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  server: process.env.DB_SERVER,
-  port: parseInt(process.env.DB_PORT || '1433', 10),
-  connectionTimeout: parseInt(process.env.DB_CONN_TIMEOUT || '30000', 10),
-  requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT || '30000', 10),
-  pool: {
-    max: 5,
-    min: 0,
-    idleTimeoutMillis: 30000
-  },
-  options: {
-    encrypt: process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_CERT === 'true'
-  }
-};
+const hasUrl = Boolean(process.env.DATABASE_URL);
+const sslEnabled = process.env.DB_SSL
+  ? process.env.DB_SSL === 'true'
+  : hasUrl;
+const ssl = sslEnabled
+  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' }
+  : false;
 
-let pool;
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function connectWithRetry(retries = 3, delayMs = 1500) {
-  try {
-    const connectedPool = await sql.connect(config);
-    connectedPool.on('error', (err) => {
-      console.error('SQL pool error', err);
-      pool = null;
-    });
-    return connectedPool;
-  } catch (err) {
-    if (retries <= 0) {
-      throw err;
+const config = hasUrl
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl,
+      max: parseInt(process.env.DB_POOL_MAX || '5', 10),
+      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
+      connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT || '30000', 10)
     }
-    await wait(delayMs);
-    return connectWithRetry(retries - 1, Math.min(delayMs * 2, 8000));
-  }
-}
+  : {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      ssl,
+      max: parseInt(process.env.DB_POOL_MAX || '5', 10),
+      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
+      connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT || '30000', 10)
+    };
+
+const pool = new Pool(config);
+
+pool.on('error', (err) => {
+  console.error('Postgres pool error', err);
+});
 
 async function getPool() {
-  if (!pool || !pool.connected) {
-    pool = await connectWithRetry();
-  }
   return pool;
 }
 
-module.exports = { sql, getPool };
+module.exports = { pool, getPool };

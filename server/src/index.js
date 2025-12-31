@@ -28,7 +28,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.get('/api/health', async (req, res) => {
   try {
     const pool = await getPool();
-    await pool.request().query('SELECT 1 AS ok');
+    await pool.query('SELECT 1 AS ok');
     res.json({ ok: true, db: true });
   } catch (err) {
     console.error('Health check failed', err);
