@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sql, getPool } = require('../db');
+const { getPool } = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -34,30 +34,25 @@ router.post('/register', async (req, res, next) => {
     }
 
     const pool = await getPool();
-    const exists = await pool
-      .request()
-      .input('email', sql.NVarChar, email)
-      .query('SELECT UserId FROM Users WHERE Email = @email');
+    const exists = await pool.query('SELECT user_id FROM users WHERE email = $1', [email]);
 
-    if (exists.recordset.length > 0) {
+    if (exists.rowCount > 0) {
       return res.status(409).json({ message: 'Email already registered.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const inserted = await pool
-      .request()
-      .input('firstName', sql.NVarChar, firstName)
-      .input('lastName', sql.NVarChar, lastName)
-      .input('email', sql.NVarChar, email)
-      .input('passwordHash', sql.NVarChar, passwordHash)
-      .query(
-        `INSERT INTO Users (FirstName, LastName, Email, PasswordHash)
-         OUTPUT INSERTED.UserId, INSERTED.FirstName, INSERTED.LastName, INSERTED.Email
-         VALUES (@firstName, @lastName, @email, @passwordHash)`
-      );
+    const inserted = await pool.query(
+      `INSERT INTO users (first_name, last_name, email, password_hash)
+       VALUES ($1, $2, $3, $4)
+       RETURNING user_id AS "UserId",
+                 first_name AS "FirstName",
+                 last_name AS "LastName",
+                 email AS "Email"`,
+      [firstName, lastName, email, passwordHash]
+    );
 
-    const user = inserted.recordset[0];
+    const user = inserted.rows[0];
     const token = signToken(user);
 
     return res.status(201).json({ token, user });
@@ -76,20 +71,22 @@ router.post('/login', async (req, res, next) => {
     }
 
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input('email', sql.NVarChar, email)
-      .query(
-        `SELECT UserId, FirstName, LastName, Email, PasswordHash
-         FROM Users
-         WHERE Email = @email`
-      );
+    const result = await pool.query(
+      `SELECT user_id AS "UserId",
+              first_name AS "FirstName",
+              last_name AS "LastName",
+              email AS "Email",
+              password_hash AS "PasswordHash"
+       FROM users
+       WHERE email = $1`,
+      [email]
+    );
 
-    if (result.recordset.length === 0) {
+    if (result.rowCount === 0) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    const user = result.recordset[0];
+    const user = result.rows[0];
     const ok = await bcrypt.compare(password, user.PasswordHash);
     if (!ok) {
       return res.status(401).json({ message: 'Invalid email or password.' });
@@ -107,16 +104,18 @@ router.post('/login', async (req, res, next) => {
 router.get('/me', auth, async (req, res, next) => {
   try {
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .query(
-        `SELECT UserId, FirstName, LastName, Email, CreatedAt
-         FROM Users
-         WHERE UserId = @userId`
-      );
+    const result = await pool.query(
+      `SELECT user_id AS "UserId",
+              first_name AS "FirstName",
+              last_name AS "LastName",
+              email AS "Email",
+              created_at AS "CreatedAt"
+       FROM users
+       WHERE user_id = $1`,
+      [req.user.userId]
+    );
 
-    return res.json({ user: result.recordset[0] });
+    return res.json({ user: result.rows[0] });
   } catch (err) {
     return next(err);
   }
@@ -132,26 +131,25 @@ router.patch('/password', auth, async (req, res, next) => {
     }
 
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .query('SELECT PasswordHash FROM Users WHERE UserId = @userId');
+    const result = await pool.query(
+      'SELECT password_hash AS "PasswordHash" FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
 
-    if (result.recordset.length === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const ok = await bcrypt.compare(currentPassword, result.recordset[0].PasswordHash);
+    const ok = await bcrypt.compare(currentPassword, result.rows[0].PasswordHash);
     if (!ok) {
       return res.status(401).json({ message: 'Current password is incorrect.' });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .input('passwordHash', sql.NVarChar, passwordHash)
-      .query('UPDATE Users SET PasswordHash = @passwordHash WHERE UserId = @userId');
+    await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [
+      passwordHash,
+      req.user.userId
+    ]);
 
     return res.json({ message: 'Password updated.' });
   } catch (err) {

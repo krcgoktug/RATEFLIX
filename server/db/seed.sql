@@ -1,5 +1,5 @@
 -- Sample data for development
-INSERT INTO dbo.Genres (Name)
+INSERT INTO genres (name)
 VALUES
   ('Action'),
   ('Adventure'),
@@ -13,7 +13,7 @@ VALUES
   ('Sci-Fi'),
   ('Thriller');
 
-INSERT INTO dbo.Titles (Title, TitleType, ReleaseYear, PosterPath, TmdbId, TmdbType)
+INSERT INTO titles (title, title_type, release_year, poster_path, tmdb_id, tmdb_type)
 VALUES
   ('Spider-Man: Across the Spider-Verse', 'Movie', 2023, 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg', 569094, 'movie'),
   ('Interstellar', 'Movie', 2014, 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', 157336, 'movie'),
@@ -66,8 +66,8 @@ VALUES
   ('7. Kogustaki Mucize', 'Movie', 2019, 'https://image.tmdb.org/t/p/w500/sOfUbzu6OUL5cscGODPdpHn9C1g.jpg', 637920, 'movie'),
   ('Organize Isler', 'Movie', 2005, 'https://image.tmdb.org/t/p/w500/52EZHd5hKzBpfCXJCgAcVNE4GKO.jpg', 30634, 'movie');
 
-INSERT INTO dbo.TitleGenres (TitleId, GenreId)
-SELECT t.TitleId, g.GenreId
+INSERT INTO title_genres (title_id, genre_id)
+SELECT t.title_id, g.genre_id
 FROM (VALUES
   ('Spider-Man: Across the Spider-Verse', 'Animation'),
   ('Spider-Man: Across the Spider-Verse', 'Action'),
@@ -197,31 +197,31 @@ FROM (VALUES
   ('7. Kogustaki Mucize', 'Drama'),
   ('Organize Isler', 'Comedy'),
   ('Organize Isler', 'Crime')
-) AS v(Title, Genre)
-JOIN dbo.Titles t ON t.Title = v.Title
-JOIN dbo.Genres g ON g.Name = v.Genre;
+) AS v(title, genre)
+JOIN titles t ON t.title = v.title
+JOIN genres g ON g.name = v.genre;
 
--- Create a demo user (replace PasswordHash with a real bcrypt hash)
-INSERT INTO dbo.Users (FirstName, LastName, Email, PasswordHash)
+-- Create a demo user (replace password_hash with a real bcrypt hash)
+INSERT INTO users (first_name, last_name, email, password_hash)
 VALUES ('Goktug', 'Krc', 'demo@rateflix.com', 'CHANGE_ME_HASH');
 
--- Add titles to demo user list (UserId = 1)
-INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-SELECT 1, t.TitleId, 'watched', 9, 'Stylish and emotional.', '2024-02-10', 1
-FROM dbo.Titles t
-WHERE t.Title = 'Spider-Man: Across the Spider-Verse';
+-- Add titles to demo user list (user_id = 1)
+INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+SELECT 1, t.title_id, 'watched', 9, 'Stylish and emotional.', '2024-02-10', true
+FROM titles t
+WHERE t.title = 'Spider-Man: Across the Spider-Verse';
 
-INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-SELECT 1, t.TitleId, 'watched', 10, 'All-time favorite.', '2024-01-18', 1
-FROM dbo.Titles t
-WHERE t.Title = 'Interstellar';
+INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+SELECT 1, t.title_id, 'watched', 10, 'All-time favorite.', '2024-01-18', true
+FROM titles t
+WHERE t.title = 'Interstellar';
 
-INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-SELECT 1, t.TitleId, 'watchlist', NULL, NULL, NULL, 0
-FROM dbo.Titles t
-WHERE t.Title = 'Stranger Things';
+INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+SELECT 1, t.title_id, 'watchlist', NULL, NULL, NULL, false
+FROM titles t
+WHERE t.title = 'Stranger Things';
 
-INSERT INTO dbo.UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-SELECT 1, t.TitleId, 'watchlist', NULL, NULL, NULL, 0
-FROM dbo.Titles t
-WHERE t.Title = 'The Dark Knight';
+INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+SELECT 1, t.title_id, 'watchlist', NULL, NULL, NULL, false
+FROM titles t
+WHERE t.title = 'The Dark Knight';

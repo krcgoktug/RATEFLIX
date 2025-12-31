@@ -28,8 +28,8 @@ RATEFLIX is a simple web-based database system for tracking movies and TV series
 
 <!-- pagebreak -->
 
-## 2. Database Design (MSSQL)
-The database uses Microsoft SQL Server and includes five relational tables:
+## 2. Database Design (PostgreSQL)
+The database uses PostgreSQL and includes five relational tables:
 
 ### Tables
 - **Users**: stores account data
@@ -101,7 +101,7 @@ The UI uses a blurred background theme, glass-like cards, and a clean sidebar la
 ## 5. Hosting and Deployment Plan
 - **Client**: Vercel or Netlify (free tier)
 - **Server/API**: Render or Railway
-- **Database**: Azure SQL free tier with student account
+- **Database**: Neon, Supabase, or Render Postgres (free tiers)
 
 Deployment steps are documented in `README.md`.
 
@@ -119,4 +119,4 @@ Add UI screenshots here for the final submission.
 <!-- pagebreak -->
 
 ## 7. Conclusion
-RATEFLIX fulfills the term project requirements by combining a relational database (MSSQL), a web interface (React), and a server-side API (Node/Express). The project is intentionally simple, easy to present, and covers all required features such as CRUD, CSS types, JavaScript functions, and database relations.
+RATEFLIX fulfills the term project requirements by combining a relational database (PostgreSQL), a web interface (React), and a server-side API (Node/Express). The project is intentionally simple, easy to present, and covers all required features such as CRUD, CSS types, JavaScript functions, and database relations.

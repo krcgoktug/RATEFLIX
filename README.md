@@ -19,24 +19,24 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 ## Tech Stack
 - Client: React + Vite + CSS
 - Server: Node.js + Express
-- Database: Microsoft SQL Server (MSSQL)
+- Database: PostgreSQL
 
 ## Project Structure
 - `client/` React UI
-- `server/` Express API + MSSQL
+- `server/` Express API + PostgreSQL
 - `server/db/` SQL schema and seed scripts
 - `report/` report template (3-5 pages)
 
 ## Setup
 1. Install Node.js (LTS)
-2. Create an MSSQL database named `Rateflix`
+2. Create a PostgreSQL database named `rateflix`
 3. Run SQL scripts in this order:
    - `server/db/schema.sql`
    - `server/db/seed.sql` (optional sample data, 50 titles)
    - Or run `npm --prefix server run init-db:seed` / `npm --prefix server run seed:titles` after configuring `.env`
 4. Configure server environment:
    - Copy `server/.env.example` to `server/.env`
-   - Fill in MSSQL connection values, `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
+   - Fill in Postgres connection values (or `DATABASE_URL`), `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
 5. Install dependencies:
    - `npm install`
    - `npm --prefix server install`
@@ -47,7 +47,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 ## Hosting (Free Options)
 - Client: Vercel or Netlify
 - Server/API: Render or Railway
-- Database: Azure SQL free tier (student) or SQL Server on a VM
+- Database: Neon, Supabase, or Render Postgres (free tiers)
 
 ## Notes for Assignment Requirements
 - HTML template: `client/src/components/Layout.jsx` is used for every page.
@@ -60,7 +60,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 ## TMDB Integration
 TMDB is used as an external data source for search and import. Add your TMDB API key to `server/.env` to enable:
 - `GET /api/tmdb/search` (search TMDB)
-- `POST /api/tmdb/import` (import a title into MSSQL)
+- `POST /api/tmdb/import` (import a title into Postgres)
 
 ## Sample Data
 `server/db/seed.sql` includes 50 movie/series entries with TMDB posters for the Explore page.

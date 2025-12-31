@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { sql, getPool } = require('../db');
+const { getPool } = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -58,32 +58,27 @@ router.get('/', async (req, res, next) => {
     const genre = String(req.query.genre || '').trim();
 
     const pool = await getPool();
-    const request = pool.request();
-    request.input('search', sql.NVarChar, search);
-    request.input('type', sql.NVarChar, type);
-    request.input('year', sql.Int, Number.isNaN(year) ? 0 : year);
-    request.input('genre', sql.NVarChar, genre);
-
-    const result = await request.query(
+    const result = await pool.query(
       `SELECT
-         t.TitleId,
-         t.Title,
-         t.TitleType,
-         t.ReleaseYear,
-         t.PosterPath,
-         STRING_AGG(g.Name, ', ') AS Genres
-       FROM Titles t
-       LEFT JOIN TitleGenres tg ON tg.TitleId = t.TitleId
-       LEFT JOIN Genres g ON g.GenreId = tg.GenreId
-       WHERE (@search = '' OR t.Title LIKE '%' + @search + '%')
-         AND (@type = '' OR t.TitleType = @type)
-         AND (@year = 0 OR t.ReleaseYear = @year)
-         AND (@genre = '' OR g.Name = @genre)
-       GROUP BY t.TitleId, t.Title, t.TitleType, t.ReleaseYear, t.PosterPath
-       ORDER BY t.Title ASC`
+         t.title_id AS "TitleId",
+         t.title AS "Title",
+         t.title_type AS "TitleType",
+         t.release_year AS "ReleaseYear",
+         t.poster_path AS "PosterPath",
+         STRING_AGG(g.name, ', ') AS "Genres"
+       FROM titles t
+       LEFT JOIN title_genres tg ON tg.title_id = t.title_id
+       LEFT JOIN genres g ON g.genre_id = tg.genre_id
+       WHERE ($1 = '' OR t.title ILIKE '%' || $1 || '%')
+         AND ($2 = '' OR t.title_type = $2)
+         AND ($3 = 0 OR t.release_year = $3)
+         AND ($4 = '' OR g.name = $4)
+       GROUP BY t.title_id, t.title, t.title_type, t.release_year, t.poster_path
+       ORDER BY t.title ASC`,
+      [search, type, Number.isNaN(year) ? 0 : year, genre]
     );
 
-    return res.json({ items: result.recordset });
+    return res.json({ items: result.rows });
   } catch (err) {
     return next(err);
   }
@@ -97,29 +92,27 @@ router.get('/:id', async (req, res, next) => {
     }
 
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input('id', sql.Int, id)
-      .query(
-        `SELECT
-           t.TitleId,
-           t.Title,
-           t.TitleType,
-           t.ReleaseYear,
-           t.PosterPath,
-           STRING_AGG(g.Name, ', ') AS Genres
-         FROM Titles t
-         LEFT JOIN TitleGenres tg ON tg.TitleId = t.TitleId
-         LEFT JOIN Genres g ON g.GenreId = tg.GenreId
-         WHERE t.TitleId = @id
-         GROUP BY t.TitleId, t.Title, t.TitleType, t.ReleaseYear, t.PosterPath`
-      );
+    const result = await pool.query(
+      `SELECT
+         t.title_id AS "TitleId",
+         t.title AS "Title",
+         t.title_type AS "TitleType",
+         t.release_year AS "ReleaseYear",
+         t.poster_path AS "PosterPath",
+         STRING_AGG(g.name, ', ') AS "Genres"
+       FROM titles t
+       LEFT JOIN title_genres tg ON tg.title_id = t.title_id
+       LEFT JOIN genres g ON g.genre_id = tg.genre_id
+       WHERE t.title_id = $1
+       GROUP BY t.title_id, t.title, t.title_type, t.release_year, t.poster_path`,
+      [id]
+    );
 
-    if (result.recordset.length === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Title not found.' });
     }
 
-    return res.json({ item: result.recordset[0] });
+    return res.json({ item: result.rows[0] });
   } catch (err) {
     return next(err);
   }
@@ -143,71 +136,63 @@ router.post('/', auth, upload.single('poster'), async (req, res, next) => {
   const normalizedStatus = status === 'watched' ? 'watched' : 'watchlist';
   const posterPath = req.file ? `/uploads/${req.file.filename}` : null;
 
+  const pool = await getPool();
+  const client = await pool.connect();
+
   try {
-    const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    await client.query('BEGIN');
 
-    try {
-      const titleInsert = await new sql.Request(transaction)
-        .input('title', sql.NVarChar, title)
-        .input('type', sql.NVarChar, type)
-        .input('year', sql.Int, year)
-        .input('posterPath', sql.NVarChar, posterPath)
-        .query(
-          `INSERT INTO Titles (Title, TitleType, ReleaseYear, PosterPath)
-           OUTPUT INSERTED.TitleId
-           VALUES (@title, @type, @year, @posterPath)`
-        );
+    const titleInsert = await client.query(
+      `INSERT INTO titles (title, title_type, release_year, poster_path)
+       VALUES ($1, $2, $3, $4)
+       RETURNING title_id`,
+      [title, type, year, posterPath]
+    );
 
-      const titleId = titleInsert.recordset[0].TitleId;
+    const titleId = titleInsert.rows[0].title_id;
 
-      for (const name of genres) {
-        const genreCheck = await new sql.Request(transaction)
-          .input('name', sql.NVarChar, name)
-          .query('SELECT GenreId FROM Genres WHERE Name = @name');
-
-        let genreId;
-        if (genreCheck.recordset.length > 0) {
-          genreId = genreCheck.recordset[0].GenreId;
-        } else {
-          const genreInsert = await new sql.Request(transaction)
-            .input('name', sql.NVarChar, name)
-            .query('INSERT INTO Genres (Name) OUTPUT INSERTED.GenreId VALUES (@name)');
-          genreId = genreInsert.recordset[0].GenreId;
-        }
-
-        await new sql.Request(transaction)
-          .input('titleId', sql.Int, titleId)
-          .input('genreId', sql.Int, genreId)
-          .query('INSERT INTO TitleGenres (TitleId, GenreId) VALUES (@titleId, @genreId)');
-      }
-
-      const watchedDateValue = normalizedStatus === 'watched'
-        ? (watchedAt ? new Date(watchedAt) : new Date())
-        : null;
-
-      await new sql.Request(transaction)
-        .input('userId', sql.Int, req.user.userId)
-        .input('titleId', sql.Int, titleId)
-        .input('status', sql.NVarChar, normalizedStatus)
-        .input('rating', sql.Int, rating)
-        .input('review', sql.NVarChar, review || null)
-        .input('watchedAt', sql.Date, watchedDateValue)
-        .input('isFavorite', sql.Bit, isFavorite)
-        .query(
-          `INSERT INTO UserTitles (UserId, TitleId, Status, Rating, Review, WatchedAt, IsFavorite)
-           VALUES (@userId, @titleId, @status, @rating, @review, @watchedAt, @isFavorite)`
-        );
-
-      await transaction.commit();
-      return res.status(201).json({ titleId });
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
+    for (const name of genres) {
+      const genreInsert = await client.query(
+        `INSERT INTO genres (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING genre_id`,
+        [name]
+      );
+      const genreId = genreInsert.rows[0].genre_id;
+      await client.query(
+        `INSERT INTO title_genres (title_id, genre_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [titleId, genreId]
+      );
     }
+
+    const watchedDateValue = normalizedStatus === 'watched'
+      ? (watchedAt ? new Date(watchedAt) : new Date())
+      : null;
+
+    await client.query(
+      `INSERT INTO user_titles (user_id, title_id, status, rating, review, watched_at, is_favorite)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        req.user.userId,
+        titleId,
+        normalizedStatus,
+        rating,
+        review || null,
+        watchedDateValue,
+        isFavorite
+      ]
+    );
+
+    await client.query('COMMIT');
+    return res.status(201).json({ titleId });
   } catch (err) {
+    await client.query('ROLLBACK');
     return next(err);
+  } finally {
+    client.release();
   }
 });
 

@@ -1,57 +1,58 @@
-IF OBJECT_ID('dbo.UserTitles', 'U') IS NOT NULL DROP TABLE dbo.UserTitles;
-IF OBJECT_ID('dbo.TitleGenres', 'U') IS NOT NULL DROP TABLE dbo.TitleGenres;
-IF OBJECT_ID('dbo.Genres', 'U') IS NOT NULL DROP TABLE dbo.Genres;
-IF OBJECT_ID('dbo.Titles', 'U') IS NOT NULL DROP TABLE dbo.Titles;
-IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL DROP TABLE dbo.Users;
+DROP TABLE IF EXISTS user_titles;
+DROP TABLE IF EXISTS title_genres;
+DROP TABLE IF EXISTS genres;
+DROP TABLE IF EXISTS titles;
+DROP TABLE IF EXISTS users;
 
-CREATE TABLE dbo.Users (
-  UserId INT IDENTITY(1,1) PRIMARY KEY,
-  FirstName NVARCHAR(50) NOT NULL,
-  LastName NVARCHAR(50) NOT NULL,
-  Email NVARCHAR(255) NOT NULL UNIQUE,
-  PasswordHash NVARCHAR(255) NOT NULL,
-  CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+CREATE TABLE users (
+  user_id SERIAL PRIMARY KEY,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE dbo.Titles (
-  TitleId INT IDENTITY(1,1) PRIMARY KEY,
-  Title NVARCHAR(200) NOT NULL,
-  TitleType NVARCHAR(20) NOT NULL CHECK (TitleType IN ('Movie','Series')),
-  ReleaseYear INT NOT NULL,
-  PosterPath NVARCHAR(400) NULL,
-  TmdbId INT NULL,
-  TmdbType NVARCHAR(10) NULL CHECK (TmdbType IN ('movie','tv')),
-  CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+CREATE TABLE titles (
+  title_id SERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  title_type VARCHAR(20) NOT NULL CHECK (title_type IN ('Movie', 'Series')),
+  release_year INT NOT NULL,
+  poster_path VARCHAR(400),
+  tmdb_id INT,
+  tmdb_type VARCHAR(10) CHECK (tmdb_type IN ('movie', 'tv')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IX_Titles_Tmdb ON dbo.Titles (TmdbId, TmdbType)
-WHERE TmdbId IS NOT NULL AND TmdbType IS NOT NULL;
+CREATE UNIQUE INDEX titles_tmdb_unique
+  ON titles (tmdb_id, tmdb_type)
+  WHERE tmdb_id IS NOT NULL AND tmdb_type IS NOT NULL;
 
-CREATE TABLE dbo.Genres (
-  GenreId INT IDENTITY(1,1) PRIMARY KEY,
-  Name NVARCHAR(50) NOT NULL UNIQUE
+CREATE TABLE genres (
+  genre_id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE dbo.TitleGenres (
-  TitleId INT NOT NULL,
-  GenreId INT NOT NULL,
-  PRIMARY KEY (TitleId, GenreId),
-  CONSTRAINT FK_TitleGenres_Title FOREIGN KEY (TitleId) REFERENCES dbo.Titles(TitleId) ON DELETE CASCADE,
-  CONSTRAINT FK_TitleGenres_Genre FOREIGN KEY (GenreId) REFERENCES dbo.Genres(GenreId) ON DELETE CASCADE
+CREATE TABLE title_genres (
+  title_id INT NOT NULL,
+  genre_id INT NOT NULL,
+  PRIMARY KEY (title_id, genre_id),
+  CONSTRAINT fk_title_genres_title FOREIGN KEY (title_id) REFERENCES titles(title_id) ON DELETE CASCADE,
+  CONSTRAINT fk_title_genres_genre FOREIGN KEY (genre_id) REFERENCES genres(genre_id) ON DELETE CASCADE
 );
 
-CREATE TABLE dbo.UserTitles (
-  UserTitleId INT IDENTITY(1,1) PRIMARY KEY,
-  UserId INT NOT NULL,
-  TitleId INT NOT NULL,
-  Status NVARCHAR(20) NOT NULL CHECK (Status IN ('watchlist','watched')),
-  Rating INT NULL CHECK (Rating BETWEEN 1 AND 10),
-  Review NVARCHAR(800) NULL,
-  WatchedAt DATE NULL,
-  IsFavorite BIT NOT NULL DEFAULT 0,
-  AddedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  CONSTRAINT FK_UserTitles_User FOREIGN KEY (UserId) REFERENCES dbo.Users(UserId) ON DELETE CASCADE,
-  CONSTRAINT FK_UserTitles_Title FOREIGN KEY (TitleId) REFERENCES dbo.Titles(TitleId) ON DELETE CASCADE,
-  CONSTRAINT UQ_UserTitles UNIQUE (UserId, TitleId)
+CREATE TABLE user_titles (
+  user_title_id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL,
+  title_id INT NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('watchlist', 'watched')),
+  rating INT NULL CHECK (rating BETWEEN 1 AND 10),
+  review VARCHAR(800) NULL,
+  watched_at DATE NULL,
+  is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_user_titles_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_titles_title FOREIGN KEY (title_id) REFERENCES titles(title_id) ON DELETE CASCADE,
+  CONSTRAINT uq_user_titles UNIQUE (user_id, title_id)
 );

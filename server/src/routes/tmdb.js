@@ -1,6 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const { sql, getPool } = require('../db');
+const { getPool } = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -96,15 +96,15 @@ router.get('/search', auth, async (req, res, next) => {
 });
 
 router.post('/import', auth, async (req, res, next) => {
+  const tmdbId = parseInt(req.body.tmdbId || '0', 10);
+  const tmdbType = String(req.body.tmdbType || '').toLowerCase();
+  const status = req.body.status === 'watched' ? 'watched' : 'watchlist';
+
+  if (!tmdbId || !['movie', 'tv'].includes(tmdbType)) {
+    return res.status(400).json({ message: 'Invalid TMDB payload.' });
+  }
+
   try {
-    const tmdbId = parseInt(req.body.tmdbId || '0', 10);
-    const tmdbType = String(req.body.tmdbType || '').toLowerCase();
-    const status = req.body.status === 'watched' ? 'watched' : 'watchlist';
-
-    if (!tmdbId || !['movie', 'tv'].includes(tmdbType)) {
-      return res.status(400).json({ message: 'Invalid TMDB payload.' });
-    }
-
     const details = await tmdbRequest(`/${tmdbType}/${tmdbId}`, {});
     const title = tmdbType === 'tv' ? details.name : details.title;
     const date = tmdbType === 'tv' ? details.first_air_date : details.release_date;
@@ -115,87 +115,77 @@ router.post('/import', auth, async (req, res, next) => {
     const genres = (details.genres || []).map((genre) => genre.name).filter(Boolean);
 
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
 
     try {
-      const existingTitle = await new sql.Request(transaction)
-        .input('tmdbId', sql.Int, tmdbId)
-        .input('tmdbType', sql.NVarChar, tmdbType)
-        .query('SELECT TitleId FROM Titles WHERE TmdbId = @tmdbId AND TmdbType = @tmdbType');
+      await client.query('BEGIN');
 
-      let titleId = existingTitle.recordset[0]?.TitleId;
+      const existingTitle = await client.query(
+        'SELECT title_id FROM titles WHERE tmdb_id = $1 AND tmdb_type = $2',
+        [tmdbId, tmdbType]
+      );
+
+      let titleId = existingTitle.rows[0]?.title_id;
 
       if (!titleId) {
-        const inserted = await new sql.Request(transaction)
-          .input('title', sql.NVarChar, title)
-          .input('type', sql.NVarChar, tmdbType === 'tv' ? 'Series' : 'Movie')
-          .input('year', sql.Int, year)
-          .input('posterPath', sql.NVarChar, posterPath)
-          .input('tmdbId', sql.Int, tmdbId)
-          .input('tmdbType', sql.NVarChar, tmdbType)
-          .query(
-            `INSERT INTO Titles (Title, TitleType, ReleaseYear, PosterPath, TmdbId, TmdbType)
-             OUTPUT INSERTED.TitleId
-             VALUES (@title, @type, @year, @posterPath, @tmdbId, @tmdbType)`
-          );
-        titleId = inserted.recordset[0].TitleId;
+        const inserted = await client.query(
+          `INSERT INTO titles (title, title_type, release_year, poster_path, tmdb_id, tmdb_type)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING title_id`,
+          [title, tmdbType === 'tv' ? 'Series' : 'Movie', year, posterPath, tmdbId, tmdbType]
+        );
+        titleId = inserted.rows[0].title_id;
 
         for (const name of genres) {
-          const genreCheck = await new sql.Request(transaction)
-            .input('name', sql.NVarChar, name)
-            .query('SELECT GenreId FROM Genres WHERE Name = @name');
-
-          let genreId;
-          if (genreCheck.recordset.length > 0) {
-            genreId = genreCheck.recordset[0].GenreId;
-          } else {
-            const genreInsert = await new sql.Request(transaction)
-              .input('name', sql.NVarChar, name)
-              .query('INSERT INTO Genres (Name) OUTPUT INSERTED.GenreId VALUES (@name)');
-            genreId = genreInsert.recordset[0].GenreId;
-          }
-
-          await new sql.Request(transaction)
-            .input('titleId', sql.Int, titleId)
-            .input('genreId', sql.Int, genreId)
-            .query('INSERT INTO TitleGenres (TitleId, GenreId) VALUES (@titleId, @genreId)');
+          const genreInsert = await client.query(
+            `INSERT INTO genres (name)
+             VALUES ($1)
+             ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+             RETURNING genre_id`,
+            [name]
+          );
+          const genreId = genreInsert.rows[0].genre_id;
+          await client.query(
+            `INSERT INTO title_genres (title_id, genre_id)
+             VALUES ($1, $2)
+             ON CONFLICT DO NOTHING`,
+            [titleId, genreId]
+          );
         }
       }
 
-      const existingUserTitle = await new sql.Request(transaction)
-        .input('userId', sql.Int, req.user.userId)
-        .input('titleId', sql.Int, titleId)
-        .query('SELECT UserTitleId FROM UserTitles WHERE UserId = @userId AND TitleId = @titleId');
+      const existingUserTitle = await client.query(
+        'SELECT user_title_id FROM user_titles WHERE user_id = $1 AND title_id = $2',
+        [req.user.userId, titleId]
+      );
 
-      if (existingUserTitle.recordset.length > 0) {
-        await transaction.commit();
+      if (existingUserTitle.rowCount > 0) {
+        await client.query('COMMIT');
         return res.json({
           titleId,
-          userTitleId: existingUserTitle.recordset[0].UserTitleId,
+          userTitleId: existingUserTitle.rows[0].user_title_id,
           existed: true
         });
       }
 
-      const userInsert = await new sql.Request(transaction)
-        .input('userId', sql.Int, req.user.userId)
-        .input('titleId', sql.Int, titleId)
-        .input('status', sql.NVarChar, status)
-        .query(
-          `INSERT INTO UserTitles (UserId, TitleId, Status)
-           OUTPUT INSERTED.UserTitleId
-           VALUES (@userId, @titleId, @status)`
-        );
+      const userInsert = await client.query(
+        `INSERT INTO user_titles (user_id, title_id, status)
+         VALUES ($1, $2, $3)
+         RETURNING user_title_id`,
+        [req.user.userId, titleId, status]
+      );
 
-      await transaction.commit();
+      await client.query('COMMIT');
       return res.status(201).json({
         titleId,
-        userTitleId: userInsert.recordset[0].UserTitleId,
+        userTitleId: userInsert.rows[0].user_title_id,
         existed: false
       });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     return next(err);

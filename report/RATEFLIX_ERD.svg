@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .box { fill: #ffffff; stroke: #222222; stroke-width: 2; }
+      .title { font: 700 16px Arial, sans-serif; fill: #111111; }
+      .col { font: 12px Consolas, "Courier New", monospace; fill: #222222; }
+      .line { stroke: #333333; stroke-width: 2; }
+      .note { font: 12px Arial, sans-serif; fill: #555555; }
+    </style>
+  </defs>
+
+  <text x="24" y="36" class="title">RATEFLIX ER Diagram (PostgreSQL)</text>
+
+  <!-- Users -->
+  <rect x="40" y="90" width="260" height="200" class="box"/>
+  <text x="55" y="115" class="title">users</text>
+  <text x="55" y="140" class="col">PK  user_id</text>
+  <text x="55" y="160" class="col">first_name</text>
+  <text x="55" y="180" class="col">last_name</text>
+  <text x="55" y="200" class="col">email (UNIQUE)</text>
+  <text x="55" y="220" class="col">password_hash</text>
+  <text x="55" y="240" class="col">created_at</text>
+
+  <!-- UserTitles -->
+  <rect x="400" y="90" width="300" height="240" class="box"/>
+  <text x="415" y="115" class="title">user_titles</text>
+  <text x="415" y="140" class="col">PK  user_title_id</text>
+  <text x="415" y="160" class="col">FK  user_id</text>
+  <text x="415" y="180" class="col">FK  title_id</text>
+  <text x="415" y="200" class="col">status</text>
+  <text x="415" y="220" class="col">rating</text>
+  <text x="415" y="240" class="col">review</text>
+  <text x="415" y="260" class="col">watched_at</text>
+  <text x="415" y="280" class="col">is_favorite</text>
+  <text x="415" y="300" class="col">added_at / updated_at</text>
+
+  <!-- Titles -->
+  <rect x="820" y="90" width="300" height="240" class="box"/>
+  <text x="835" y="115" class="title">titles</text>
+  <text x="835" y="140" class="col">PK  title_id</text>
+  <text x="835" y="160" class="col">title</text>
+  <text x="835" y="180" class="col">title_type (Movie/Series)</text>
+  <text x="835" y="200" class="col">release_year</text>
+  <text x="835" y="220" class="col">poster_path</text>
+  <text x="835" y="240" class="col">tmdb_id / tmdb_type</text>
+  <text x="835" y="260" class="col">created_at</text>
+
+  <!-- Genres -->
+  <rect x="40" y="380" width="260" height="140" class="box"/>
+  <text x="55" y="405" class="title">genres</text>
+  <text x="55" y="430" class="col">PK  genre_id</text>
+  <text x="55" y="450" class="col">name (UNIQUE)</text>
+
+  <!-- TitleGenres -->
+  <rect x="820" y="380" width="300" height="140" class="box"/>
+  <text x="835" y="405" class="title">title_genres</text>
+  <text x="835" y="430" class="col">PK/FK  title_id</text>
+  <text x="835" y="450" class="col">PK/FK  genre_id</text>
+
+  <!-- Relationships -->
+  <line x1="300" y1="190" x2="400" y2="190" class="line"/>
+  <line x1="700" y1="190" x2="820" y2="190" class="line"/>
+  <line x1="970" y1="330" x2="970" y2="380" class="line"/>
+  <line x1="300" y1="450" x2="820" y2="450" class="line"/>
+
+  <text x="310" y="180" class="note">1 --- *</text>
+  <text x="720" y="180" class="note">*</text>
+  <text x="980" y="365" class="note">1 --- *</text>
+  <text x="600" y="440" class="note">* --- *</text>
+</svg>

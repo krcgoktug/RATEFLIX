@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { sql, getPool } = require('../src/db');
+const { getPool } = require('../src/db');
 
 const genres = [
   'Action',
@@ -471,189 +471,113 @@ const titles = [
 ];
 
 async function ensureGenre(pool, name) {
-  await pool
-    .request()
-    .input('name', sql.NVarChar, name)
-    .query('IF NOT EXISTS (SELECT 1 FROM Genres WHERE Name = @name) INSERT INTO Genres (Name) VALUES (@name)');
+  await pool.query(
+    'INSERT INTO genres (name) VALUES ($1) ON CONFLICT (name) DO NOTHING',
+    [name]
+  );
 }
 
 async function upsertTitle(pool, entry) {
-  const request = pool.request();
-  request.input('tmdbId', sql.Int, entry.tmdbId);
-  request.input('tmdbType', sql.NVarChar, entry.tmdbType);
-  request.input('title', sql.NVarChar, entry.title);
-  request.input('type', sql.NVarChar, entry.type);
-  request.input('year', sql.Int, entry.year);
-  request.input('posterPath', sql.NVarChar, entry.posterPath);
-
   let titleId = null;
-  let aliasMatched = false;
 
   if (entry.aliases && entry.aliases.length > 0) {
     for (const alias of entry.aliases) {
-      const aliasResult = await pool
-        .request()
-        .input('alias', sql.NVarChar, alias)
-        .input('type', sql.NVarChar, entry.type)
-        .query('SELECT TitleId FROM Titles WHERE Title = @alias AND TitleType = @type');
-      if (aliasResult.recordset.length > 0) {
-        titleId = aliasResult.recordset[0].TitleId;
-        aliasMatched = true;
+      const aliasResult = await pool.query(
+        'SELECT title_id FROM titles WHERE title = $1 AND title_type = $2',
+        [alias, entry.type]
+      );
+      if (aliasResult.rowCount > 0) {
+        titleId = aliasResult.rows[0].title_id;
         break;
       }
     }
   }
 
   if (!titleId && entry.tmdbId && entry.tmdbType) {
-    const tmdbResult = await request.query(
-      `SELECT TitleId FROM Titles WHERE TmdbId = @tmdbId AND TmdbType = @tmdbType`
+    const tmdbResult = await pool.query(
+      'SELECT title_id FROM titles WHERE tmdb_id = $1 AND tmdb_type = $2',
+      [entry.tmdbId, entry.tmdbType]
     );
-    if (tmdbResult.recordset.length > 0) {
-      titleId = tmdbResult.recordset[0].TitleId;
+    if (tmdbResult.rowCount > 0) {
+      titleId = tmdbResult.rows[0].title_id;
     }
   }
 
   if (!titleId) {
-    const titleResult = await request.query(
-      `SELECT TitleId FROM Titles WHERE Title = @title AND TitleType = @type`
+    const titleResult = await pool.query(
+      'SELECT title_id FROM titles WHERE title = $1 AND title_type = $2',
+      [entry.title, entry.type]
     );
-    if (titleResult.recordset.length > 0) {
-      titleId = titleResult.recordset[0].TitleId;
+    if (titleResult.rowCount > 0) {
+      titleId = titleResult.rows[0].title_id;
     }
   }
 
   if (!titleId) {
-    const inserted = await request.query(
-      `INSERT INTO Titles (Title, TitleType, ReleaseYear, PosterPath, TmdbId, TmdbType)
-       OUTPUT INSERTED.TitleId
-       VALUES (@title, @type, @year, @posterPath, @tmdbId, @tmdbType)`
+    const inserted = await pool.query(
+      `INSERT INTO titles (title, title_type, release_year, poster_path, tmdb_id, tmdb_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING title_id`,
+      [
+        entry.title,
+        entry.type,
+        entry.year,
+        entry.posterPath,
+        entry.tmdbId || null,
+        entry.tmdbType || null
+      ]
     );
-    titleId = inserted.recordset[0].TitleId;
+    titleId = inserted.rows[0].title_id;
   } else {
-    if (aliasMatched && entry.tmdbId && entry.tmdbType) {
-      const duplicate = await pool
-        .request()
-        .input('tmdbId', sql.Int, entry.tmdbId)
-        .input('tmdbType', sql.NVarChar, entry.tmdbType)
-        .input('titleId', sql.Int, titleId)
-        .query(
-          `SELECT TitleId FROM Titles
-           WHERE TmdbId = @tmdbId AND TmdbType = @tmdbType AND TitleId <> @titleId`
-        );
-
-      if (duplicate.recordset.length > 0) {
-        const dupId = duplicate.recordset[0].TitleId;
-        await pool
-          .request()
-          .input('targetId', sql.Int, titleId)
-          .input('dupId', sql.Int, dupId)
-          .query(
-            `UPDATE ut
-             SET TitleId = @targetId
-             FROM UserTitles ut
-             WHERE ut.TitleId = @dupId
-               AND NOT EXISTS (
-                 SELECT 1 FROM UserTitles u2
-                 WHERE u2.TitleId = @targetId AND u2.UserId = ut.UserId
-               )`
-          );
-        await pool
-          .request()
-          .input('dupId', sql.Int, dupId)
-          .query('DELETE FROM Titles WHERE TitleId = @dupId');
-      }
-    }
-
-    await request
-      .input('titleId', sql.Int, titleId)
-      .query(
-        `UPDATE Titles
-         SET Title = @title,
-             TitleType = @type,
-             ReleaseYear = @year,
-             PosterPath = @posterPath,
-             TmdbId = @tmdbId,
-             TmdbType = @tmdbType
-         WHERE TitleId = @titleId`
-      );
-  }
-
-  if (entry.tmdbId && entry.tmdbType) {
-    const duplicate = await pool
-      .request()
-      .input('tmdbId', sql.Int, entry.tmdbId)
-      .input('tmdbType', sql.NVarChar, entry.tmdbType)
-      .input('titleId', sql.Int, titleId)
-      .query(
-        `SELECT TitleId FROM Titles
-         WHERE TmdbId = @tmdbId AND TmdbType = @tmdbType AND TitleId <> @titleId`
-      );
-
-    if (duplicate.recordset.length > 0) {
-      const dupId = duplicate.recordset[0].TitleId;
-      await pool
-        .request()
-        .input('targetId', sql.Int, titleId)
-        .input('dupId', sql.Int, dupId)
-        .query(
-          `UPDATE ut
-           SET TitleId = @targetId
-           FROM UserTitles ut
-           WHERE ut.TitleId = @dupId
-             AND NOT EXISTS (
-               SELECT 1 FROM UserTitles u2
-               WHERE u2.TitleId = @targetId AND u2.UserId = ut.UserId
-             )`
-        );
-      await pool
-        .request()
-        .input('dupId', sql.Int, dupId)
-        .query('DELETE FROM Titles WHERE TitleId = @dupId');
-    }
+    await pool.query(
+      `UPDATE titles
+       SET title = $1,
+           title_type = $2,
+           release_year = $3,
+           poster_path = $4,
+           tmdb_id = $5,
+           tmdb_type = $6
+       WHERE title_id = $7`,
+      [
+        entry.title,
+        entry.type,
+        entry.year,
+        entry.posterPath,
+        entry.tmdbId || null,
+        entry.tmdbType || null,
+        titleId
+      ]
+    );
   }
 
   return titleId;
 }
 
 async function ensureTitleGenre(pool, titleId, genreName) {
-  const genreResult = await pool
-    .request()
-    .input('name', sql.NVarChar, genreName)
-    .query('SELECT GenreId FROM Genres WHERE Name = @name');
+  const genreResult = await pool.query(
+    'SELECT genre_id FROM genres WHERE name = $1',
+    [genreName]
+  );
 
-  if (genreResult.recordset.length === 0) {
+  if (genreResult.rowCount === 0) {
     return;
   }
 
-  const genreId = genreResult.recordset[0].GenreId;
-  await pool
-    .request()
-    .input('titleId', sql.Int, titleId)
-    .input('genreId', sql.Int, genreId)
-    .query(
-      `IF NOT EXISTS (SELECT 1 FROM TitleGenres WHERE TitleId = @titleId AND GenreId = @genreId)
-       INSERT INTO TitleGenres (TitleId, GenreId) VALUES (@titleId, @genreId)`
-    );
+  const genreId = genreResult.rows[0].genre_id;
+  await pool.query(
+    `INSERT INTO title_genres (title_id, genre_id)
+     VALUES ($1, $2)
+     ON CONFLICT DO NOTHING`,
+    [titleId, genreId]
+  );
 }
 
 async function run() {
   const pool = await getPool();
 
-  await pool
-    .request()
-    .query(
-      "DELETE FROM Titles WHERE Title = 'The Bear' AND TitleType = 'Series'"
-    );
-  await pool
-    .request()
-    .query(
-      "DELETE FROM Titles WHERE Title = 'Interstellar' AND PosterPath IS NULL"
-    );
-  await pool
-    .request()
-    .query(
-      "DELETE FROM Titles WHERE Title IN ('AROG', 'GORA') AND PosterPath IS NULL"
-    );
+  await pool.query("DELETE FROM titles WHERE title = 'The Bear' AND title_type = 'Series'");
+  await pool.query("DELETE FROM titles WHERE title = 'Interstellar' AND poster_path IS NULL");
+  await pool.query("DELETE FROM titles WHERE title IN ('AROG', 'GORA') AND poster_path IS NULL");
 
   for (const name of genres) {
     await ensureGenre(pool, name);
@@ -667,7 +591,7 @@ async function run() {
   }
 
   console.log('Sample titles updated.');
-  await sql.close();
+  await pool.end();
 }
 
 run().catch((err) => {
