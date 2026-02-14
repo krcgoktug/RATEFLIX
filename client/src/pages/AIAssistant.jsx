@@ -5,216 +5,169 @@ import api from '../api/client.js';
 const starterMessage = {
   role: 'assistant',
   content:
-    'Hi. I am RATEFLIX AI. I can suggest movies and series based on your favorites and watched history, with a polite and clear style.'
+    'Hi. I am RATEFLIX AI. Ask me anything. I switch to recommendations only when you explicitly ask for suggestions.'
 };
 
 const quickPrompts = [
-  'Suggest one movie for tonight based on my favorites.',
-  'Recommend 5 series similar to my watched list.',
-  'Give me high-rated but slower-paced picks.',
-  'Which titles in my watchlist should I start with?'
+  'Can we chat in Turkish?',
+  'What is 2 plus 2?',
+  'Tell me a short history of Hollywood.',
+  'Recommend 3 titles from my favorites.'
 ];
 
-function toGenreArray(items) {
-  return items
-    .flatMap((item) => String(item.Genres || '').split(',').map((genre) => genre.trim()))
-    .filter(Boolean);
+const legacyRecommendationPatterns = [
+  /a quick pick for you right now/i,
+  /here are personalized picks from your library patterns/i,
+  /tell me your mood and i will narrow these further/i,
+  /strong taste signal:/i,
+  /recommended picks:/i
+];
+
+function isLegacyRecommendationSpam(text) {
+  const value = String(text || '');
+  return legacyRecommendationPatterns.some((pattern) => pattern.test(value));
 }
 
-function topGenres(items, limit = 3) {
-  const counts = new Map();
-  for (const genre of toGenreArray(items)) {
-    counts.set(genre, (counts.get(genre) || 0) + 1);
+function detectLanguage(message) {
+  const lower = String(message || '').toLowerCase();
+  const trChars = (lower.match(/[\u00e7\u011f\u0131\u00f6\u015f\u00fc]/g) || []).length;
+  const trWords = (lower.match(/\b(ve|ile|bir|naber|nasilsin|nas\u0131ls\u0131n|merhaba|selam|film|dizi|oner|oneri|izle|hangi|neden|nasil|nas\u0131l|kim|ne|turkce|turkce|favori|kategori|tavsiye)\b/g) || []).length;
+  const enWords = (lower.match(/\b(the|and|what|which|how|why|who|movie|series|recommend|suggest|watch|favorite|favourite|category)\b/g) || []).length;
+  return trChars + trWords > enWords ? 'tr' : 'en';
+}
+
+function t(lang, trText, enText) {
+  return lang === 'tr' ? trText : enText;
+}
+
+function trySolveBasicMath(message) {
+  const normalized = String(message || '')
+    .toLowerCase()
+    .replace(/,/g, '.')
+    .replace(/\bplus\b/g, '+')
+    .replace(/\barti\b/g, '+')
+    .replace(/\bminus\b/g, '-')
+    .replace(/\beksi\b/g, '-')
+    .replace(/\btimes\b/g, '*')
+    .replace(/\bx\b/g, '*')
+    .replace(/\bcarpi\b/g, '*')
+    .replace(/\bmultiplied by\b/g, '*')
+    .replace(/\bdivided by\b/g, '/')
+    .replace(/\bbolu\b/g, '/');
+
+  const match = normalized.match(/(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+
+  const left = Number(match[1]);
+  const op = match[2];
+  const right = Number(match[3]);
+  if (Number.isNaN(left) || Number.isNaN(right)) return null;
+
+  let value = null;
+  if (op === '+') value = left + right;
+  if (op === '-') value = left - right;
+  if (op === '*') value = left * right;
+  if (op === '/') {
+    if (right === 0) return null;
+    value = left / right;
   }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([genre]) => genre);
+  if (value === null || !Number.isFinite(value)) return null;
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6)));
 }
 
-function normalizeTitle(value) {
-  return String(value || '').trim().toLowerCase();
+function detectMode(message) {
+  const lower = String(message || '').toLowerCase();
+  const recommendationRegex = /(recommend|suggest|pick|what should i watch|watch next|similar to|based on my favorites|watchlist order|tavsiye|oner|oneri|izlemeli|izleyeyim|benzer|hangi filmi izleyeyim|hangi diziyi izleyeyim)/;
+
+  return {
+    asksTurkish: /(turkce|speak turkish|turkish konu[s\u015f]|turkce konu[s\u015f]|t[\u00fcu]rk[\u00e7c]e konu[s\u015f])/.test(lower),
+    asksEnglish: /(english|ingilizce|speak english)/.test(lower),
+    asksHistory: /(history|tarih|teach|explain|timeline|hollywood|industry|how did|sinema tarihi|turkish cinema|turk sinemasi)/.test(lower),
+    asksRecommendation: recommendationRegex.test(lower),
+    isSmallTalk: /(\b(hi|hello|hey|selam|merhaba|naber|nasilsin|nas\u0131ls\u0131n)\b|how are you|how r u|what's up|whats up)/.test(lower),
+    isGeneralQuestion: /[?]$/.test(lower)
+      || /\b(count|calculate|kac|ka\u00e7)\b/.test(lower)
+      || /\b(what|which|who|why|how|when|where|can you|do you|is|are)\b/.test(lower)
+      || /\b(ne|kim|neden|nasil|nas\u0131l|hangi|nerede|ne zaman|sence)\b/.test(lower)
+  };
 }
 
-function uniqueByTitle(items) {
-  const map = new Map();
-  for (const item of items) {
-    const key = normalizeTitle(item.Title);
-    if (!key) continue;
-    if (!map.has(key)) {
-      map.set(key, item);
-    }
+function historyMiniAnswer(lang) {
+  if (lang === 'tr') {
+    return [
+      'Kisa Hollywood tarihi ozeti:',
+      '- 1910-1920: Sessiz sinema donemi.',
+      '- 1930-1950: Klasik studio sistemi.',
+      '- 1960-1970: New Hollywood, yonetmen odakli donem.',
+      '- 1980-1990: Blockbuster cagi.',
+      '- 2000-2010: Franchise/IP ve dijital VFX buyumesi.',
+      '- 2020+: Streaming agirlikli dagitim modelleri.',
+      'Istersen tek bir donemi detaylandirayim.'
+    ].join('\n');
   }
-  return [...map.values()];
-}
 
-function itemGenres(item) {
-  return String(item.Genres || '')
-    .split(',')
-    .map((genre) => genre.trim())
-    .filter(Boolean);
-}
-
-function genreMatchScore(item, preferredGenres) {
-  if (!preferredGenres.length) return 0;
-  const set = new Set(itemGenres(item).map((genre) => genre.toLowerCase()));
-  return preferredGenres.reduce(
-    (score, genre) => (set.has(genre.toLowerCase()) ? score + 1 : score),
-    0
-  );
-}
-
-function detectRequestedGenres(message) {
-  const lower = message.toLowerCase();
-  const checks = [
-    { label: 'Sci-Fi', keys: ['sci-fi', 'scifi', 'science fiction'] },
-    { label: 'Drama', keys: ['drama'] },
-    { label: 'Action', keys: ['action'] },
-    { label: 'Thriller', keys: ['thriller'] },
-    { label: 'Adventure', keys: ['adventure'] },
-    { label: 'Comedy', keys: ['comedy', 'funny'] },
-    { label: 'Fantasy', keys: ['fantasy'] },
-    { label: 'Mystery', keys: ['mystery'] },
-    { label: 'Romance', keys: ['romance', 'romantic'] },
-    { label: 'Horror', keys: ['horror', 'scary'] }
-  ];
-
-  return checks
-    .filter((item) => item.keys.some((key) => lower.includes(key)))
-    .map((item) => item.label);
-}
-
-function sortCandidates(items, preferredGenres, prioritizeHighRating) {
-  return [...items].sort((a, b) => {
-    const genreDelta = genreMatchScore(b, preferredGenres) - genreMatchScore(a, preferredGenres);
-    if (genreDelta !== 0) return genreDelta;
-
-    const ratingA = Number(a.Rating || 0);
-    const ratingB = Number(b.Rating || 0);
-    if (prioritizeHighRating && ratingA !== ratingB) return ratingB - ratingA;
-
-    const yearA = Number(a.ReleaseYear || 0);
-    const yearB = Number(b.ReleaseYear || 0);
-    if (yearA !== yearB) return yearB - yearA;
-
-    return String(a.Title || '').localeCompare(String(b.Title || ''));
-  });
-}
-
-function formatPick(item, preferredGenres) {
-  const genres = itemGenres(item);
-  const matched = genres.filter((genre) =>
-    preferredGenres.some((preferred) => preferred.toLowerCase() === genre.toLowerCase())
-  );
-  const reason = matched.length ? `matches ${matched.join(', ')}` : (genres[0] ? `genre: ${genres[0]}` : 'taste match');
-  return `${item.Title} (${item.TitleType || 'Title'}, ${item.ReleaseYear || 'N/A'}) - ${reason}`;
+  return [
+    'Quick Hollywood timeline:',
+    '- 1910s-1920s: Silent era.',
+    '- 1930s-1950s: Classic studio system.',
+    '- 1960s-1970s: New Hollywood.',
+    '- 1980s-1990s: Blockbuster era.',
+    '- 2000s-2010s: Franchise/IP and digital VFX growth.',
+    '- 2020s: Streaming-first distribution.',
+    'If you want, I can expand one era in detail.'
+  ].join('\n');
 }
 
 async function buildLocalFallbackReply(userMessage) {
-  const [favoritesRes, watchedRes, watchlistRes] = await Promise.all([
-    api.get('/user-titles?favorite=true'),
-    api.get('/user-titles?status=watched'),
-    api.get('/user-titles?status=watchlist')
-  ]);
+  const mode = detectMode(userMessage);
+  const lang = mode.asksTurkish ? 'tr' : (mode.asksEnglish ? 'en' : detectLanguage(userMessage));
 
-  const favorites = favoritesRes.data?.items || [];
-  const watched = watchedRes.data?.items || [];
-  const watchlist = watchlistRes.data?.items || [];
-  const all = [...favorites, ...watched];
-
-  if (all.length === 0 && watchlist.length === 0) {
-    return [
-      'I could not reach the AI service right now, but I can still help.',
-      'Your library is currently empty, so there is not enough taste data yet.',
-      'Please add a few titles to Favorites or Watched, then ask again for personalized recommendations.'
-    ].join('\n');
+  const mathAnswer = trySolveBasicMath(userMessage);
+  if (mathAnswer !== null) {
+    return t(lang, `Sonuc: ${mathAnswer}`, `The result is: ${mathAnswer}`);
   }
 
-  const lower = userMessage.toLowerCase();
-  const isGreeting =
-    /(hi|hello|hey|how are you|how r u|what's up|whats up)/.test(lower) &&
-    !/(movie|film|series|show|watchlist|recommend|suggest|pick)/.test(lower);
-  const asksWatchlistOrder = /(watchlist|start|first|order)/.test(lower);
-  const wantsSeries = lower.includes('series') || lower.includes('show');
-  const wantsMovie = lower.includes('movie') || lower.includes('film');
-  const wantsHighRated = /(high-rated|top rated|best|10\/10|high rating|must watch)/.test(lower);
-  const wantsSlowPace = /(slow|calm|cozy|chill|slower-paced|slow-paced)/.test(lower);
-
-  const requestedGenres = detectRequestedGenres(lower);
-  const preferredGenres = requestedGenres.length ? requestedGenres : topGenres(all, 3);
-  const favoritePool = uniqueByTitle([...favorites]);
-  const watchedPool = uniqueByTitle([...watched]);
-  const watchlistPool = uniqueByTitle([...watchlist]);
-  const combinedPool = uniqueByTitle([...watchlistPool, ...favoritePool, ...watchedPool]);
-
-  let pool = combinedPool;
-  if (wantsSeries) {
-    pool = pool.filter((item) => String(item.TitleType || '').toLowerCase() === 'series');
-  } else if (wantsMovie) {
-    pool = pool.filter((item) => String(item.TitleType || '').toLowerCase() === 'movie');
+  if (mode.asksTurkish) {
+    return 'Tabii, Turkce devam edelim. Genel sohbet edebiliriz.';
   }
 
-  if (requestedGenres.length) {
-    pool = pool.filter((item) =>
-      itemGenres(item).some((genre) =>
-        requestedGenres.some((requested) => requested.toLowerCase() === genre.toLowerCase())
-      )
+  if (mode.asksEnglish) {
+    return 'Sure, we can continue in English.';
+  }
+
+  if (mode.asksHistory) {
+    return historyMiniAnswer(lang);
+  }
+
+  if (mode.asksRecommendation) {
+    return t(
+      lang,
+      'Su an AI model baglantisi yok. Kisisel film/dizi onerisi simdi uretemiyorum. Birazdan tekrar dene.',
+      'The AI model is currently unavailable, so I cannot generate personalized movie/series recommendations right now. Please try again shortly.'
     );
   }
 
-  if (wantsSlowPace) {
-    const slowKeywords = ['Drama', 'Mystery', 'Romance'];
-    const slowPool = pool.filter((item) =>
-      itemGenres(item).some((genre) =>
-        slowKeywords.some((slow) => slow.toLowerCase() === genre.toLowerCase())
-      )
+  if (mode.isSmallTalk) {
+    return t(
+      lang,
+      'Iyiyim, tesekkurler. Sen nasilsin? Istiyorsan sohbet edelim.',
+      'I am doing well, thanks. How are you? We can keep chatting.'
     );
-    if (slowPool.length) {
-      pool = slowPool;
-    }
   }
 
-  const sortedPool = sortCandidates(pool.length ? pool : combinedPool, preferredGenres, wantsHighRated);
-  const watchlistOrder = sortCandidates(watchlistPool, preferredGenres, true).slice(0, 5);
-  const picks = sortedPool.slice(0, 5);
-
-  if (isGreeting) {
-    const helloPick = picks[0];
-    return [
-      'I am doing well, thank you. Hope you are doing great too.',
-      helloPick
-        ? `Since you asked, here is one quick pick for you: ${formatPick(helloPick, preferredGenres)}.`
-        : 'If you want, I can suggest a movie or series based on your favorites.'
-    ].join('\n');
+  if (mode.isGeneralQuestion) {
+    return t(
+      lang,
+      'Sorunu aldim. Simdi local fallback moddayim ama yardim etmeye calisiyorum.',
+      'I got your question. I am currently in local fallback mode, but I will still try to help.'
+    );
   }
 
-  const lines = ['Here are personalized picks from your library patterns:'];
-
-  if (preferredGenres.length) {
-    lines.push(`- Strong taste signal: ${preferredGenres.join(', ')}.`);
-  }
-
-  if (asksWatchlistOrder && watchlistOrder.length) {
-    lines.push('- Suggested watchlist order:');
-    for (const item of watchlistOrder) {
-      lines.push(`  - ${formatPick(item, preferredGenres)}`);
-    }
-    lines.push('- If you want, I can also make a weekend marathon order.');
-    return lines.join('\n');
-  }
-
-  if (!picks.length) {
-    lines.push('- I need a bit more signal. Please add a few more favorites or watched titles.');
-    return lines.join('\n');
-  }
-
-  const titleCount = wantsSeries || wantsMovie ? 5 : 4;
-  lines.push('- Recommended picks:');
-  for (const item of picks.slice(0, titleCount)) {
-    lines.push(`  - ${formatPick(item, preferredGenres)}`);
-  }
-  lines.push('- Tell me your mood (mind-bending, cozy, intense thriller, etc.) and I will narrow this list further.');
-  return lines.join('\n');
+  return t(
+    lang,
+    'Buradayim. Istegini yaz, sohbet ederek devam edelim.',
+    'I am here. Send your message and we can continue in chat mode.'
+  );
 }
 
 export default function AIAssistant() {
@@ -222,6 +175,7 @@ export default function AIAssistant() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [modeInfo, setModeInfo] = useState('');
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -244,7 +198,17 @@ export default function AIAssistant() {
 
     try {
       const response = await api.post('/ai/chat', { messages: history });
-      const reply = String(response.data?.reply || '').trim();
+      const rawReply = String(response.data?.reply || '').trim();
+      const provider = String(response.data?.provider || '').toLowerCase();
+      const usedFallback = Boolean(response.data?.usedFallback);
+      const fallbackReason = String(response.data?.fallbackReason || '').trim();
+      const assistantVersion = String(response.data?.assistantVersion || '').trim();
+      const legacySpam = isLegacyRecommendationSpam(rawReply);
+
+      const reply = legacySpam
+        ? await buildLocalFallbackReply(userMessage)
+        : rawReply;
+
       setMessages((prev) => [
         ...prev,
         {
@@ -252,6 +216,17 @@ export default function AIAssistant() {
           content: reply || 'I could not generate a response just now. Please try again.'
         }
       ]);
+
+      if (legacySpam) {
+        setModeInfo('Mode: Local override (legacy backend response filtered)');
+      } else if (usedFallback || provider === 'fallback') {
+        const base = `Mode: Fallback (${fallbackReason || 'provider unavailable'})`;
+        setModeInfo(assistantVersion ? `${base} | ${assistantVersion}` : base);
+      } else if (provider) {
+        setModeInfo(assistantVersion ? `Mode: ${provider} | ${assistantVersion}` : `Mode: ${provider}`);
+      } else {
+        setModeInfo('');
+      }
       setError('');
     } catch (err) {
       try {
@@ -260,6 +235,7 @@ export default function AIAssistant() {
           ...prev,
           { role: 'assistant', content: localReply }
         ]);
+        setModeInfo('Mode: Local fallback (API request failed)');
         setError('');
       } catch (fallbackErr) {
         setError(err.response?.data?.message || 'Could not get an AI response. Please try again.');
@@ -273,6 +249,7 @@ export default function AIAssistant() {
     setMessages([starterMessage]);
     setInput('');
     setError('');
+    setModeInfo('');
   };
 
   return (
@@ -282,7 +259,7 @@ export default function AIAssistant() {
           <div>
             <h2>AI Assistant</h2>
             <p className="muted">
-              Get personalized recommendations from your favorites and watched history.
+              Chat freely. Recommendation mode is used only when you explicitly ask for suggestions.
             </p>
           </div>
           <button className="btn ghost" type="button" onClick={handleReset} disabled={loading}>
@@ -321,7 +298,7 @@ export default function AIAssistant() {
             {loading && (
               <article className="ai-msg assistant">
                 <div className="ai-msg-role">RATEFLIX AI</div>
-                <div className="ai-msg-bubble ai-msg-thinking">Generating recommendations...</div>
+                <div className="ai-msg-bubble ai-msg-thinking">Thinking...</div>
               </article>
             )}
 
@@ -334,7 +311,7 @@ export default function AIAssistant() {
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Example: Recommend 3 sci-fi movies similar to my favorites."
+              placeholder="Ask anything. If you want suggestions, explicitly write recommend/oner."
               maxLength={500}
               disabled={loading}
             />
@@ -344,6 +321,7 @@ export default function AIAssistant() {
           </form>
 
           {error && <div className="alert">{error}</div>}
+          {modeInfo && <div className="muted">{modeInfo}</div>}
         </section>
       </section>
     </Layout>
