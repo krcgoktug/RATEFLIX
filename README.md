@@ -8,7 +8,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 - 💻 GitHub: https://github.com/krcgoktug/RATEFLIX
 
 ## Features
-- Authentication: register, login, profile, change password
+- Authentication: register, login, profile, change password, forgot-password (email code)
 - Dashboard: totals, average rating, recent watched, featured card
 - Watchlist & Watched lists with update/remove actions
 - Add Movie/Series with status, rating, review, favorites
@@ -37,6 +37,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 4. Configure server environment:
    - Copy `server/.env.example` to `server/.env`
    - Fill in Postgres connection values (or `DATABASE_URL`), `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
+   - For forgot-password emails, also configure `SMTP_*` variables and `SMTP_FROM`
 5. Install dependencies:
    - `npm install`
    - `npm --prefix server install`

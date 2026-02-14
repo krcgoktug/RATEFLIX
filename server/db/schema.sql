@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS password_reset_codes;
 DROP TABLE IF EXISTS user_titles;
 DROP TABLE IF EXISTS title_genres;
 DROP TABLE IF EXISTS genres;
@@ -12,6 +13,24 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE password_reset_codes (
+  reset_id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL,
+  code_hash VARCHAR(128) NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_password_reset_codes_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_password_reset_codes_user_active
+  ON password_reset_codes (user_id, created_at DESC)
+  WHERE used_at IS NULL;
+
+CREATE INDEX idx_password_reset_codes_expires_at
+  ON password_reset_codes (expires_at);
 
 CREATE TABLE titles (
   title_id SERIAL PRIMARY KEY,
