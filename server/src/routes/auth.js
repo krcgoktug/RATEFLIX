@@ -184,8 +184,16 @@ router.post('/forgot-password', async (req, res, next) => {
     const isMailError =
       err?.code === 'ETIMEDOUT' ||
       err?.code === 'ECONNECTION' ||
+      err?.code === 'ENETUNREACH' ||
+      err?.code === 'EHOSTUNREACH' ||
+      err?.code === 'ECONNREFUSED' ||
+      err?.code === 'ECONNRESET' ||
+      err?.code === 'ESOCKET' ||
       err?.code === 'EAUTH' ||
-      errorMessage.includes('smtp');
+      errorMessage.includes('smtp') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('resolve ipv4');
 
     if (isMailError) {
       console.error('Forgot password email send failed:', err.message || err);
