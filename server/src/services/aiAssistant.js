@@ -158,6 +158,15 @@ async function requestDeepSeek({ messages, profile }) {
 }
 
 async function createAssistantReply({ messages, profile }) {
+  const provider = String(process.env.AI_PROVIDER || 'deepseek').trim().toLowerCase();
+  if (provider !== 'deepseek') {
+    return {
+      reply: buildFallbackReply({ profile }),
+      provider: 'fallback',
+      usedFallback: true
+    };
+  }
+
   try {
     const reply = await requestDeepSeek({ messages, profile });
     return { reply, provider: 'deepseek', usedFallback: false };
