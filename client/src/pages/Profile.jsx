@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -91,26 +92,23 @@ export default function Profile() {
           <h3>Change password</h3>
           {message && <div className="alert">{message}</div>}
           <form className="form" onSubmit={handlePassword}>
-            <label>
-              Current password
-              <input
-                type="password"
-                name="currentPassword"
-                value={form.currentPassword}
-                onChange={handleChange}
-                required
-              />
-            </label>
-            <label>
-              New password
-              <input
-                type="password"
-                name="newPassword"
-                value={form.newPassword}
-                onChange={handleChange}
-                required
-              />
-            </label>
+            <PasswordField
+              label="Current password"
+              name="currentPassword"
+              value={form.currentPassword}
+              onChange={handleChange}
+              autoComplete="current-password"
+              required
+            />
+            <PasswordField
+              label="New password"
+              name="newPassword"
+              value={form.newPassword}
+              onChange={handleChange}
+              autoComplete="new-password"
+              minLength={6}
+              required
+            />
             <button className="btn" type="submit">Update</button>
           </form>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -96,17 +97,16 @@ export default function Register() {
               required
             />
           </label>
-          <label>
-            Password
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="At least 6 characters"
-              required
-            />
-          </label>
+          <PasswordField
+            label="Password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="At least 6 characters"
+            autoComplete="new-password"
+            minLength={6}
+            required
+          />
           <button className="btn primary" type="submit" disabled={loading}>
             {loading ? 'Creating...' : 'Register'}
           </button>
