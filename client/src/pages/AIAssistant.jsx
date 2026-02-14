@@ -32,11 +32,82 @@ function topGenres(items, limit = 3) {
     .map(([genre]) => genre);
 }
 
-function pickTitles(items, count = 3) {
-  return items
-    .slice(0, count)
-    .map((item) => item.Title)
+function normalizeTitle(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function uniqueByTitle(items) {
+  const map = new Map();
+  for (const item of items) {
+    const key = normalizeTitle(item.Title);
+    if (!key) continue;
+    if (!map.has(key)) {
+      map.set(key, item);
+    }
+  }
+  return [...map.values()];
+}
+
+function itemGenres(item) {
+  return String(item.Genres || '')
+    .split(',')
+    .map((genre) => genre.trim())
     .filter(Boolean);
+}
+
+function genreMatchScore(item, preferredGenres) {
+  if (!preferredGenres.length) return 0;
+  const set = new Set(itemGenres(item).map((genre) => genre.toLowerCase()));
+  return preferredGenres.reduce(
+    (score, genre) => (set.has(genre.toLowerCase()) ? score + 1 : score),
+    0
+  );
+}
+
+function detectRequestedGenres(message) {
+  const lower = message.toLowerCase();
+  const checks = [
+    { label: 'Sci-Fi', keys: ['sci-fi', 'scifi', 'science fiction'] },
+    { label: 'Drama', keys: ['drama'] },
+    { label: 'Action', keys: ['action'] },
+    { label: 'Thriller', keys: ['thriller'] },
+    { label: 'Adventure', keys: ['adventure'] },
+    { label: 'Comedy', keys: ['comedy', 'funny'] },
+    { label: 'Fantasy', keys: ['fantasy'] },
+    { label: 'Mystery', keys: ['mystery'] },
+    { label: 'Romance', keys: ['romance', 'romantic'] },
+    { label: 'Horror', keys: ['horror', 'scary'] }
+  ];
+
+  return checks
+    .filter((item) => item.keys.some((key) => lower.includes(key)))
+    .map((item) => item.label);
+}
+
+function sortCandidates(items, preferredGenres, prioritizeHighRating) {
+  return [...items].sort((a, b) => {
+    const genreDelta = genreMatchScore(b, preferredGenres) - genreMatchScore(a, preferredGenres);
+    if (genreDelta !== 0) return genreDelta;
+
+    const ratingA = Number(a.Rating || 0);
+    const ratingB = Number(b.Rating || 0);
+    if (prioritizeHighRating && ratingA !== ratingB) return ratingB - ratingA;
+
+    const yearA = Number(a.ReleaseYear || 0);
+    const yearB = Number(b.ReleaseYear || 0);
+    if (yearA !== yearB) return yearB - yearA;
+
+    return String(a.Title || '').localeCompare(String(b.Title || ''));
+  });
+}
+
+function formatPick(item, preferredGenres) {
+  const genres = itemGenres(item);
+  const matched = genres.filter((genre) =>
+    preferredGenres.some((preferred) => preferred.toLowerCase() === genre.toLowerCase())
+  );
+  const reason = matched.length ? `matches ${matched.join(', ')}` : (genres[0] ? `genre: ${genres[0]}` : 'taste match');
+  return `${item.Title} (${item.TitleType || 'Title'}, ${item.ReleaseYear || 'N/A'}) - ${reason}`;
 }
 
 async function buildLocalFallbackReply(userMessage) {
@@ -59,43 +130,90 @@ async function buildLocalFallbackReply(userMessage) {
     ].join('\n');
   }
 
-  const genreHighlights = topGenres(all);
-  const favoritePicks = pickTitles(favorites, 3);
-  const watchedPicks = pickTitles(watched, 3);
-  const watchlistPicks = pickTitles(watchlist, 4);
   const lower = userMessage.toLowerCase();
+  const isGreeting =
+    /(hi|hello|hey|how are you|how r u|what's up|whats up)/.test(lower) &&
+    !/(movie|film|series|show|watchlist|recommend|suggest|pick)/.test(lower);
+  const asksWatchlistOrder = /(watchlist|start|first|order)/.test(lower);
   const wantsSeries = lower.includes('series') || lower.includes('show');
-  const wantsWatchlistOrder = lower.includes('watchlist') || lower.includes('start') || lower.includes('first');
+  const wantsMovie = lower.includes('movie') || lower.includes('film');
+  const wantsHighRated = /(high-rated|top rated|best|10\/10|high rating|must watch)/.test(lower);
+  const wantsSlowPace = /(slow|calm|cozy|chill|slower-paced|slow-paced)/.test(lower);
 
-  const lines = [
-    'Here is a polite local recommendation based on your library data:'
-  ];
+  const requestedGenres = detectRequestedGenres(lower);
+  const preferredGenres = requestedGenres.length ? requestedGenres : topGenres(all, 3);
+  const favoritePool = uniqueByTitle([...favorites]);
+  const watchedPool = uniqueByTitle([...watched]);
+  const watchlistPool = uniqueByTitle([...watchlist]);
+  const combinedPool = uniqueByTitle([...watchlistPool, ...favoritePool, ...watchedPool]);
 
-  if (genreHighlights.length) {
-    lines.push(`- Your strongest genres look like: ${genreHighlights.join(', ')}.`);
-  }
-  if (favoritePicks.length) {
-    lines.push(`- Favorite mood profile: ${favoritePicks.join(', ')}.`);
-  }
-  if (watchedPicks.length) {
-    lines.push(`- Recently watched anchor titles: ${watchedPicks.join(', ')}.`);
+  let pool = combinedPool;
+  if (wantsSeries) {
+    pool = pool.filter((item) => String(item.TitleType || '').toLowerCase() === 'series');
+  } else if (wantsMovie) {
+    pool = pool.filter((item) => String(item.TitleType || '').toLowerCase() === 'movie');
   }
 
-  if (wantsWatchlistOrder && watchlistPicks.length) {
-    lines.push(`- Suggested watchlist order: ${watchlistPicks.join(' -> ')}.`);
-  } else if (wantsSeries) {
-    const seriesPool = all.filter((item) => String(item.TitleType || '').toLowerCase() === 'series');
-    const seriesPicks = pickTitles(seriesPool, 5);
-    if (seriesPicks.length) {
-      lines.push(`- Series picks for you: ${seriesPicks.join(', ')}.`);
-    } else if (watchlistPicks.length) {
-      lines.push(`- Good next picks from your watchlist: ${watchlistPicks.join(', ')}.`);
+  if (requestedGenres.length) {
+    pool = pool.filter((item) =>
+      itemGenres(item).some((genre) =>
+        requestedGenres.some((requested) => requested.toLowerCase() === genre.toLowerCase())
+      )
+    );
+  }
+
+  if (wantsSlowPace) {
+    const slowKeywords = ['Drama', 'Mystery', 'Romance'];
+    const slowPool = pool.filter((item) =>
+      itemGenres(item).some((genre) =>
+        slowKeywords.some((slow) => slow.toLowerCase() === genre.toLowerCase())
+      )
+    );
+    if (slowPool.length) {
+      pool = slowPool;
     }
-  } else if (watchlistPicks.length) {
-    lines.push(`- Good next picks from your watchlist: ${watchlistPicks.join(', ')}.`);
   }
 
-  lines.push('If you want, ask for a specific mood like "mind-bending", "cozy", or "intense thriller" and I will narrow it down.');
+  const sortedPool = sortCandidates(pool.length ? pool : combinedPool, preferredGenres, wantsHighRated);
+  const watchlistOrder = sortCandidates(watchlistPool, preferredGenres, true).slice(0, 5);
+  const picks = sortedPool.slice(0, 5);
+
+  if (isGreeting) {
+    const helloPick = picks[0];
+    return [
+      'I am doing well, thank you. Hope you are doing great too.',
+      helloPick
+        ? `Since you asked, here is one quick pick for you: ${formatPick(helloPick, preferredGenres)}.`
+        : 'If you want, I can suggest a movie or series based on your favorites.'
+    ].join('\n');
+  }
+
+  const lines = ['Here are personalized picks from your library patterns:'];
+
+  if (preferredGenres.length) {
+    lines.push(`- Strong taste signal: ${preferredGenres.join(', ')}.`);
+  }
+
+  if (asksWatchlistOrder && watchlistOrder.length) {
+    lines.push('- Suggested watchlist order:');
+    for (const item of watchlistOrder) {
+      lines.push(`  - ${formatPick(item, preferredGenres)}`);
+    }
+    lines.push('- If you want, I can also make a weekend marathon order.');
+    return lines.join('\n');
+  }
+
+  if (!picks.length) {
+    lines.push('- I need a bit more signal. Please add a few more favorites or watched titles.');
+    return lines.join('\n');
+  }
+
+  const titleCount = wantsSeries || wantsMovie ? 5 : 4;
+  lines.push('- Recommended picks:');
+  for (const item of picks.slice(0, titleCount)) {
+    lines.push(`  - ${formatPick(item, preferredGenres)}`);
+  }
+  lines.push('- Tell me your mood (mind-bending, cozy, intense thriller, etc.) and I will narrow this list further.');
   return lines.join('\n');
 }
 
