@@ -171,35 +171,20 @@ router.post('/forgot-password', async (req, res, next) => {
       [user.UserId, codeHash, expiresMinutes]
     );
 
-    await sendPasswordResetEmail({
-      to: user.Email,
-      firstName: user.FirstName,
-      code,
-      expiresMinutes
-    });
-
-    return res.json({ message: genericResponse });
-  } catch (err) {
-    const errorMessage = String(err?.message || '').toLowerCase();
-    const isMailError =
-      err?.code === 'ETIMEDOUT' ||
-      err?.code === 'ECONNECTION' ||
-      err?.code === 'ENETUNREACH' ||
-      err?.code === 'EHOSTUNREACH' ||
-      err?.code === 'ECONNREFUSED' ||
-      err?.code === 'ECONNRESET' ||
-      err?.code === 'ESOCKET' ||
-      err?.code === 'EAUTH' ||
-      errorMessage.includes('smtp') ||
-      errorMessage.includes('connection') ||
-      errorMessage.includes('network') ||
-      errorMessage.includes('resolve ipv4');
-
-    if (isMailError) {
-      console.error('Forgot password email send failed:', err.message || err);
+    try {
+      await sendPasswordResetEmail({
+        to: user.Email,
+        firstName: user.FirstName,
+        code,
+        expiresMinutes
+      });
+    } catch (mailErr) {
+      console.error('Forgot password email send failed:', mailErr.message || mailErr);
       return res.status(503).json({ message: 'Email service is temporarily unavailable.' });
     }
 
+    return res.json({ message: genericResponse });
+  } catch (err) {
     return next(err);
   }
 });
