@@ -68,7 +68,7 @@ async function buildLocalFallbackReply(userMessage) {
   const wantsWatchlistOrder = lower.includes('watchlist') || lower.includes('start') || lower.includes('first');
 
   const lines = [
-    'The AI provider is temporarily unavailable, so here is a polite local recommendation based on your data:'
+    'Here is a polite local recommendation based on your library data:'
   ];
 
   if (genreHighlights.length) {

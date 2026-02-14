@@ -400,6 +400,12 @@ a {
   gap: 20px;
 }
 
+.dashboard-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .dashboard-side .panel {
   background: var(--panel);
   padding: 20px;

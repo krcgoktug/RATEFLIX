@@ -54,7 +54,7 @@ function buildFallbackReply({ profile }) {
   const lines = [
     `Hi ${profile.firstName || ''}`.trim(),
     '',
-    'I could not reach the AI provider right now, but I prepared a quick and polite recommendation plan from your list:'
+    'Here is a quick and polite recommendation plan prepared from your list:'
   ];
 
   if (profile.topGenres.length) {
