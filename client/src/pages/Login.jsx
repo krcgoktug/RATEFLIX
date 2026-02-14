@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -71,23 +72,21 @@ export default function Login() {
               required
             />
           </label>
-          <label>
-            Password
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="******"
-              required
-            />
-          </label>
+          <PasswordField
+            label="Password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="******"
+            autoComplete="current-password"
+            required
+          />
           <button className="btn primary" type="submit" disabled={loading}>
             {loading ? 'Signing in...' : 'Login'}
           </button>
           <div className="auth-links-row">
             <Link className="auth-inline-link" to="/forgot-password" state={{ email: form.email }}>
-              {'\u015Eifremi unuttum'}
+              forget password?
             </Link>
           </div>
         </form>

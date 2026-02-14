@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 import api from '../api/client.js';
 
 export default function ForgotPassword() {
@@ -152,26 +153,24 @@ export default function ForgotPassword() {
                   required
                 />
               </label>
-              <label>
-                New password
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="At least 6 characters"
-                  required
-                />
-              </label>
-              <label>
-                Confirm new password
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  placeholder="Repeat password"
-                  required
-                />
-              </label>
+              <PasswordField
+                label="New password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+              <PasswordField
+                label="Confirm new password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
               <button className="btn primary" type="submit" disabled={loading}>
                 {loading ? 'Resetting...' : 'Reset password'}
               </button>
