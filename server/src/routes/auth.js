@@ -180,6 +180,18 @@ router.post('/forgot-password', async (req, res, next) => {
 
     return res.json({ message: genericResponse });
   } catch (err) {
+    const errorMessage = String(err?.message || '').toLowerCase();
+    const isMailError =
+      err?.code === 'ETIMEDOUT' ||
+      err?.code === 'ECONNECTION' ||
+      err?.code === 'EAUTH' ||
+      errorMessage.includes('smtp');
+
+    if (isMailError) {
+      console.error('Forgot password email send failed:', err.message || err);
+      return res.status(503).json({ message: 'Email service is temporarily unavailable.' });
+    }
+
     return next(err);
   }
 });

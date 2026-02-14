@@ -6,6 +6,7 @@ import api from '../api/client.js';
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const location = useLocation();
+  const requestTimeoutMs = 20000;
   const [step, setStep] = useState('request');
   const [email, setEmail] = useState(() => String(location.state?.email || ''));
   const [code, setCode] = useState('');
@@ -15,6 +16,13 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const resolveRequestError = (err, fallbackMessage) => {
+    if (err.code === 'ECONNABORTED') {
+      return 'Request timed out. Please try again.';
+    }
+    return err.response?.data?.message || fallbackMessage;
+  };
+
   const handleSendCode = async (event) => {
     event.preventDefault();
     setError('');
@@ -22,13 +30,13 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/forgot-password', { email });
+      const response = await api.post('/auth/forgot-password', { email }, { timeout: requestTimeoutMs });
       setStep('verify');
       setMessage(
         response.data?.message || 'If that email exists, a verification code has been sent.'
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not send verification code.');
+      setError(resolveRequestError(err, 'Could not send verification code.'));
     } finally {
       setLoading(false);
     }
@@ -40,12 +48,12 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/forgot-password', { email });
+      const response = await api.post('/auth/forgot-password', { email }, { timeout: requestTimeoutMs });
       setMessage(
         response.data?.message || 'If that email exists, a verification code has been sent.'
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not resend verification code.');
+      setError(resolveRequestError(err, 'Could not resend verification code.'));
     } finally {
       setLoading(false);
     }
@@ -71,13 +79,13 @@ export default function ForgotPassword() {
         email,
         code,
         newPassword
-      });
+      }, { timeout: requestTimeoutMs });
       setMessage(response.data?.message || 'Password reset successful. Redirecting...');
       setTimeout(() => {
         navigate('/login');
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not reset password.');
+      setError(resolveRequestError(err, 'Could not reset password.'));
     } finally {
       setLoading(false);
     }
