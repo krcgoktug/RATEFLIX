@@ -7,6 +7,7 @@ const navItems = [
   { to: '/watched', label: 'Watched' },
   { to: '/favorites', label: 'Favorites' },
   { to: '/explore', label: 'Explore' },
+  { to: '/ai', label: 'AI Assistant' },
   { to: '/profile', label: 'Profile' }
 ];
 

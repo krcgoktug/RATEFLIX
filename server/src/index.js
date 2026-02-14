@@ -11,6 +11,7 @@ const titlesRoutes = require('./routes/titles');
 const userTitlesRoutes = require('./routes/userTitles');
 const dashboardRoutes = require('./routes/dashboard');
 const tmdbRoutes = require('./routes/tmdb');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -41,6 +42,7 @@ app.use('/api/titles', titlesRoutes);
 app.use('/api/user-titles', userTitlesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/tmdb', tmdbRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

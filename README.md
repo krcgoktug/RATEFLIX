@@ -15,6 +15,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 - Detail page with update/delete actions
 - Favorites page
 - Explore page with search and filters
+- AI Assistant chat: personalized suggestions based on favorites + watched history
 
 ## Tech Stack
 - Client: React + Vite + CSS
@@ -38,6 +39,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
    - Copy `server/.env.example` to `server/.env`
    - Fill in Postgres connection values (or `DATABASE_URL`), `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
    - For forgot-password emails, configure `SMTP_*` + `SMTP_FROM`, or use Resend API (`EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_FROM`)
+   - For AI chat, set `DEEPSEEK_API_KEY` (and optional `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`, `AI_TIMEOUT_MS`)
 5. Install dependencies:
    - `npm install`
    - `npm --prefix server install`

@@ -13,6 +13,7 @@ import Explore from './pages/Explore.jsx';
 import AddTitle from './pages/AddTitle.jsx';
 import TitleDetail from './pages/TitleDetail.jsx';
 import Profile from './pages/Profile.jsx';
+import AIAssistant from './pages/AIAssistant.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 function RequireAuth({ children }) {
@@ -92,6 +93,14 @@ export default function App() {
         element={
           <RequireAuth>
             <TitleDetail />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/ai"
+        element={
+          <RequireAuth>
+            <AIAssistant />
           </RequireAuth>
         }
       />

@@ -11,6 +11,7 @@ export default function Topbar({ variant }) {
     watched: 'Watched',
     favorites: 'Favorites',
     explore: 'Explore',
+    ai: 'AI Assistant',
     add: 'Add Title',
     profile: 'Profile',
     login: 'Login',

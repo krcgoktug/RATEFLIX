@@ -89,6 +89,23 @@ const navItems = [
     )
   },
   {
+    to: '/ai',
+    label: 'AI',
+    icon: (
+      <>
+        <path
+          d="M12 3l1.9 4.1L18 9l-4.1 1.9L12 15l-1.9-4.1L6 9l4.1-1.9L12 3z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="18.2" cy="17.5" r="1.3" fill="currentColor" />
+      </>
+    )
+  },
+  {
     to: '/profile',
     label: 'Profile',
     icon: (

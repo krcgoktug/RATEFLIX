@@ -6,6 +6,7 @@ import Loader from '../components/Loader.jsx';
 import api from '../api/client.js';
 import { formatRating, formatDate } from '../utils/format.js';
 
+// Small KPI tile for dashboard summary.
 function StatCard({ label, value }) {
   return (
     <div className="stat-card">
@@ -15,11 +16,13 @@ function StatCard({ label, value }) {
   );
 }
 
+// Dashboard: summary stats, featured title, and recent activity.
 export default function Dashboard() {
   const [data, setData] = useState({ summary: null, recent: [], featured: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch dashboard metrics and recent watched list.
     const load = async () => {
       try {
         const response = await api.get('/dashboard');
@@ -74,6 +77,20 @@ export default function Dashboard() {
                 ))}
               </ul>
             )}
+          </div>
+          <div className="panel">
+            <div className="panel-header">
+              <h3>AI Assistant</h3>
+              <Link to="/ai" className="link">Open</Link>
+            </div>
+            <p className="muted">
+              Favori ve watched listene gore kibar, kisilestirilmis film/dizi onerileri al.
+            </p>
+            <div className="panel-actions">
+              <Link to="/ai" className="btn">
+                Chat ile oner
+              </Link>
+            </div>
           </div>
         </div>
       </section>
