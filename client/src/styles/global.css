@@ -1122,6 +1122,17 @@ textarea {
   color: var(--muted);
 }
 
+.auth-site-footer {
+  margin-top: auto;
+  width: min(760px, 100%);
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .grid.two {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
