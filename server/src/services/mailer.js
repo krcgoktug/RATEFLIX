@@ -6,6 +6,14 @@ function parseBoolean(value) {
   return String(value || '').toLowerCase() === 'true';
 }
 
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(String(value || ''), 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
 function hasSmtpConfig() {
   return Boolean(
     process.env.SMTP_HOST &&
@@ -21,10 +29,17 @@ function getTransporter() {
     return cachedTransporter;
   }
 
+  const connectionTimeout = parsePositiveInt(process.env.SMTP_CONNECTION_TIMEOUT_MS, 15000);
+  const greetingTimeout = parsePositiveInt(process.env.SMTP_GREETING_TIMEOUT_MS, 10000);
+  const socketTimeout = parsePositiveInt(process.env.SMTP_SOCKET_TIMEOUT_MS, 20000);
+
   cachedTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587', 10),
     secure: parseBoolean(process.env.SMTP_SECURE),
+    connectionTimeout,
+    greetingTimeout,
+    socketTimeout,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
