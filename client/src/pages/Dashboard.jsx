@@ -84,11 +84,11 @@ export default function Dashboard() {
               <Link to="/ai" className="link">Open</Link>
             </div>
             <p className="muted">
-              Favori ve watched listene gore kibar, kisilestirilmis film/dizi onerileri al.
+              Get polite and personalized movie or series suggestions based on your favorites and watched list.
             </p>
             <div className="panel-actions">
               <Link to="/ai" className="btn">
-                Chat ile oner
+                Start chat
               </Link>
             </div>
           </div>

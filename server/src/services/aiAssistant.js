@@ -44,26 +44,26 @@ function buildProfileContext(profile) {
 function buildFallbackReply({ profile }) {
   if (profile.summary.totalTitles === 0) {
     return [
-      `Merhaba ${profile.firstName || ''}`.trim(),
+      `Hi ${profile.firstName || ''}`.trim(),
       '',
-      'Henuz listen bos gorunuyor. Sana daha iyi oneri verebilmem icin birkac film/dizi ekleyip bir kismini favorilere almani oneririm.',
-      'Istersen once Explore sayfasindan baslayabiliriz.'
+      'Your list is still empty. Please add a few movies or series so I can personalize recommendations better.',
+      'You can start from the Explore page.'
     ].join('\n');
   }
 
   const lines = [
-    `Merhaba ${profile.firstName || ''}`.trim(),
+    `Hi ${profile.firstName || ''}`.trim(),
     '',
-    'Su an AI servisine baglanamadim ama listene gore hizli ve nazik bir oneri plani cikardim:'
+    'I could not reach the AI provider right now, but I prepared a quick and polite recommendation plan from your list:'
   ];
 
   if (profile.topGenres.length) {
-    lines.push(`- Zevk profilinde one cikan turler: ${profile.topGenres.join(', ')}.`);
+    lines.push(`- Your top genres: ${profile.topGenres.join(', ')}.`);
   }
 
   if (profile.favorites.length) {
     const favoritePicks = profile.favorites.slice(0, 3).map((item) => item.Title).join(', ');
-    lines.push(`- Favorilerinden anladigim ton: ${favoritePicks}. Bu cizgide icerikler seni memnun eder.`);
+    lines.push(`- Favorite vibe profile: ${favoritePicks}. Similar titles should work well for you.`);
   }
 
   if (profile.watchlist.length) {
@@ -71,12 +71,12 @@ function buildFallbackReply({ profile }) {
       .slice(0, 3)
       .map((item) => item.Title)
       .join(', ');
-    lines.push(`- Siradaki izleme icin watchlist onerim: ${watchlistPicks}.`);
+    lines.push(`- Good next picks from your watchlist: ${watchlistPicks}.`);
   } else {
-    lines.push('- Watchlist tarafi bos gorunuyor, favori turlerine gore 3-4 icerik eklemen iyi olur.');
+    lines.push('- Your watchlist is empty, so adding 3-4 titles based on your favorite genres would help.');
   }
 
-  lines.push('- Istersen bana "bu aksam tek film oner" veya "favorilerime benzer 5 dizi oner" diye yaz, daha nokta atisi yonlendireyim.');
+  lines.push('- Ask me things like "one movie for tonight" or "5 series similar to my favorites" and I will narrow it down.');
   return lines.join('\n');
 }
 
@@ -106,7 +106,7 @@ async function requestDeepSeek({ messages, profile }) {
   const systemPrompt = [
     'You are RATEFLIX AI, a polite movie and series assistant.',
     'Always keep a respectful and warm tone.',
-    'Default response language is Turkish unless the user clearly writes in another language.',
+    'Default response language is English.',
     'Use the provided user profile context to personalize recommendations.',
     'Recommend concrete titles and briefly explain why they fit the user taste.',
     'Avoid spoilers.',
