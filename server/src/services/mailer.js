@@ -37,6 +37,10 @@ function getTransporter() {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587', 10),
     secure: parseBoolean(process.env.SMTP_SECURE),
+    // Some cloud runtimes expose only internal interfaces; allow these so IPv4 resolution works.
+    allowInternalNetworkInterfaces: process.env.SMTP_ALLOW_INTERNAL_INTERFACES
+      ? parseBoolean(process.env.SMTP_ALLOW_INTERNAL_INTERFACES)
+      : true,
     connectionTimeout,
     greetingTimeout,
     socketTimeout,
