@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 const net = require('net');
+const fetch = require('node-fetch');
 
 let cachedTransporter = null;
 let cachedTransporterKey = '';
@@ -27,6 +28,21 @@ function hasSmtpConfig() {
       process.env.SMTP_PASS &&
       process.env.SMTP_FROM
   );
+}
+
+function hasResendConfig() {
+  return Boolean(process.env.RESEND_API_KEY && (process.env.RESEND_FROM || process.env.SMTP_FROM));
+}
+
+function getEmailProvider() {
+  const configured = String(process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+  if (configured === 'resend' || configured === 'smtp') {
+    return configured;
+  }
+  if (hasResendConfig()) {
+    return 'resend';
+  }
+  return 'smtp';
 }
 
 function shouldForceIpv4() {
@@ -111,6 +127,47 @@ async function getTransporter() {
   return cachedTransporter;
 }
 
+async function sendWithResend({ to, subject, text, html }) {
+  const from = process.env.RESEND_FROM || process.env.SMTP_FROM;
+  const timeoutMs = parsePositiveInt(process.env.RESEND_TIMEOUT_MS, 15000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        text,
+        html
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      const err = new Error(`Resend API error (${response.status}): ${body}`);
+      err.code = 'ERESEND';
+      throw err;
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeoutErr = new Error('Resend API timeout.');
+      timeoutErr.code = 'ETIMEDOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function sendPasswordResetEmail({ to, firstName, code, expiresMinutes }) {
   const greetingName = firstName || 'there';
   const subject = 'RATEFLIX password reset code';
@@ -131,9 +188,25 @@ async function sendPasswordResetEmail({ to, firstName, code, expiresMinutes }) {
     </div>
   `;
 
+  const provider = getEmailProvider();
+  if (provider === 'resend') {
+    if (!hasResendConfig()) {
+      throw new Error('Resend is selected but RESEND_API_KEY/RESEND_FROM is missing.');
+    }
+    await sendWithResend({
+      to,
+      subject,
+      text,
+      html
+    });
+    return;
+  }
+
   if (!hasSmtpConfig()) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('SMTP is not configured. Set SMTP_* variables for password reset emails.');
+      throw new Error(
+        'Email delivery is not configured. Set SMTP_* variables or RESEND_API_KEY/RESEND_FROM.'
+      );
     }
     console.warn(
       `SMTP is not configured. Password reset code for ${to}: ${code}. Set SMTP_* variables to deliver emails.`

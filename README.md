@@ -37,7 +37,7 @@ RATEFLIX is a simple movie/series rating and tracking site (watchlist, watched, 
 4. Configure server environment:
    - Copy `server/.env.example` to `server/.env`
    - Fill in Postgres connection values (or `DATABASE_URL`), `JWT_SECRET`, and `TMDB_API_KEY` (for TMDB import)
-   - For forgot-password emails, also configure `SMTP_*` variables and `SMTP_FROM`
+   - For forgot-password emails, configure `SMTP_*` + `SMTP_FROM`, or use Resend API (`EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_FROM`)
 5. Install dependencies:
    - `npm install`
    - `npm --prefix server install`
