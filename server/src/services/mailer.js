@@ -1,6 +1,11 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+const net = require('net');
 
 let cachedTransporter = null;
+let cachedTransporterKey = '';
+let cachedResolvedIpv4Host = '';
+let cachedResolvedIpv4HostExpiresAt = 0;
 
 function parseBoolean(value) {
   return String(value || '').toLowerCase() === 'true';
@@ -24,23 +29,67 @@ function hasSmtpConfig() {
   );
 }
 
-function getTransporter() {
-  if (cachedTransporter) {
-    return cachedTransporter;
+function shouldForceIpv4() {
+  if (process.env.SMTP_FORCE_IPV4 === undefined) {
+    return true;
+  }
+  return parseBoolean(process.env.SMTP_FORCE_IPV4);
+}
+
+async function resolveSmtpHost(host) {
+  if (!host || net.isIP(host) || !shouldForceIpv4()) {
+    return { host, tlsServername: undefined };
   }
 
+  if (cachedResolvedIpv4Host && Date.now() < cachedResolvedIpv4HostExpiresAt) {
+    return { host: cachedResolvedIpv4Host, tlsServername: host };
+  }
+
+  const addresses = await dns.promises.resolve4(host);
+  if (!addresses || addresses.length === 0) {
+    throw new Error(`Could not resolve IPv4 address for SMTP host: ${host}`);
+  }
+
+  cachedResolvedIpv4Host = addresses[0];
+  cachedResolvedIpv4HostExpiresAt =
+    Date.now() + parsePositiveInt(process.env.SMTP_DNS_CACHE_MS, 300000);
+
+  return { host: cachedResolvedIpv4Host, tlsServername: host };
+}
+
+async function getTransporter() {
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure = parseBoolean(process.env.SMTP_SECURE);
   const connectionTimeout = parsePositiveInt(process.env.SMTP_CONNECTION_TIMEOUT_MS, 15000);
   const greetingTimeout = parsePositiveInt(process.env.SMTP_GREETING_TIMEOUT_MS, 10000);
   const socketTimeout = parsePositiveInt(process.env.SMTP_SOCKET_TIMEOUT_MS, 20000);
+  const allowInternalNetworkInterfaces = process.env.SMTP_ALLOW_INTERNAL_INTERFACES
+    ? parseBoolean(process.env.SMTP_ALLOW_INTERNAL_INTERFACES)
+    : true;
 
-  cachedTransporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: parseBoolean(process.env.SMTP_SECURE),
+  const resolved = await resolveSmtpHost(process.env.SMTP_HOST);
+  const cacheKey = [
+    resolved.host,
+    port,
+    secure,
+    process.env.SMTP_USER,
+    connectionTimeout,
+    greetingTimeout,
+    socketTimeout,
+    allowInternalNetworkInterfaces,
+    resolved.tlsServername || ''
+  ].join('|');
+
+  if (cachedTransporter && cachedTransporterKey === cacheKey) {
+    return cachedTransporter;
+  }
+
+  const transportOptions = {
+    host: resolved.host,
+    port,
+    secure,
     // Some cloud runtimes expose only internal interfaces; allow these so IPv4 resolution works.
-    allowInternalNetworkInterfaces: process.env.SMTP_ALLOW_INTERNAL_INTERFACES
-      ? parseBoolean(process.env.SMTP_ALLOW_INTERNAL_INTERFACES)
-      : true,
+    allowInternalNetworkInterfaces,
     connectionTimeout,
     greetingTimeout,
     socketTimeout,
@@ -48,7 +97,16 @@ function getTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
     }
-  });
+  };
+
+  if (resolved.tlsServername) {
+    transportOptions.tls = {
+      servername: resolved.tlsServername
+    };
+  }
+
+  cachedTransporter = nodemailer.createTransport(transportOptions);
+  cachedTransporterKey = cacheKey;
 
   return cachedTransporter;
 }
@@ -83,7 +141,7 @@ async function sendPasswordResetEmail({ to, firstName, code, expiresMinutes }) {
     return;
   }
 
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
     to,
