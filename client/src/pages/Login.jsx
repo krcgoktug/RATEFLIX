@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
+// Login form with a short retry for cold-started servers.
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -15,6 +16,7 @@ export default function Login() {
     setForm({ ...form, [event.target.name]: event.target.value });
   };
 
+  // Submit credentials and store JWT on success.
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
@@ -83,6 +85,11 @@ export default function Login() {
           <button className="btn primary" type="submit" disabled={loading}>
             {loading ? 'Signing in...' : 'Login'}
           </button>
+          <div className="auth-links-row">
+            <Link className="auth-inline-link" to="/forgot-password" state={{ email: form.email }}>
+              {'\u015Eifremi unuttum'}
+            </Link>
+          </div>
         </form>
         <p className="auth-footer">
           No account yet? <Link to="/register">Create one</Link>
